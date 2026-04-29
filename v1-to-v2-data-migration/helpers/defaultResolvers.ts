@@ -245,6 +245,17 @@ export const defaultDeathResolver: ResolverMap = {
       data,
       'death.spouse.spouse-view-group.verified'
     ),
+  
+  'mother.age': (data: EventRegistration) =>
+    data.mother?.ageOfIndividualInYears && {
+      age: data.mother?.ageOfIndividualInYears,
+      asOfDateRef: 'eventDetails.date',
+    },
+  'father.age': (data: EventRegistration) =>
+    data.father?.ageOfIndividualInYears && {
+      age: data.father?.ageOfIndividualInYears,
+      asOfDateRef: 'eventDetails.date',
+    },
 }
 
 export const defaultBirthResolver: ResolverMap = {
@@ -261,15 +272,15 @@ export const defaultBirthResolver: ResolverMap = {
    * Address fields in different situations
    * @todo Addresses need to be properly handled
    */
-  'child.placeOfBirth': (data: EventRegistration) => data.eventLocation?.type,
+  'child.birthInstitution': (data: EventRegistration) => data.eventLocation?.type,
   'child.birthLocation': (data: EventRegistration) =>
     data.eventLocation?.type === 'HEALTH_FACILITY'
       ? data.eventLocation.id
       : null,
-  'child.birthLocation.privateHome': (data: EventRegistration) =>
-    data.eventLocation?.type === 'PRIVATE_HOME'
-      ? resolveAddress(data, data.eventLocation?.address)
-      : null,
+  // 'child.birthLocation.privateHome': (data: EventRegistration) =>
+  //   data.eventLocation?.type === 'PRIVATE_HOME'
+  //     ? resolveAddress(data, data.eventLocation?.address)
+  //     : null,
   'child.birthLocation.other': (data: EventRegistration) =>
     data.eventLocation?.type === 'OTHER'
       ? resolveAddress(data, data.eventLocation?.address)

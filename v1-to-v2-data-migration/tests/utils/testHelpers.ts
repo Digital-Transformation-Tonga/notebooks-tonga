@@ -2,7 +2,10 @@ import defaultResolvers, {
   defaultBirthResolver,
   defaultDeathResolver,
 } from '../../helpers/defaultResolvers.ts'
-import { countryResolver } from '../../countryData/countryResolvers.ts'
+import {
+  countryResolver,
+  deathCountryResolver,
+} from '../../countryData/countryResolvers.ts'
 import type { EventRegistration, HistoryItem } from '../../helpers/types.ts'
 import { buildPhoneNumber } from './phoneBuilder.ts'
 import { COUNTRY_CODE } from '../../countryData/addressResolver.ts'
@@ -19,7 +22,11 @@ export function buildBirthResolver() {
  * Build a death resolver with all default and country resolvers
  */
 export function buildDeathResolver() {
-  const allResolvers = { ...defaultResolvers, ...countryResolver }
+  const allResolvers = {
+    ...defaultResolvers,
+    ...countryResolver,
+    ...deathCountryResolver,
+  }
   return { ...defaultDeathResolver, ...allResolvers }
 }
 

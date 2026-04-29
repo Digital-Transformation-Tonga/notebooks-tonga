@@ -3,7 +3,7 @@ export const DEFAULT_FIELD_MAPPINGS = {
 
   'birth.child.gender': 'child.gender',
   'birth.child.childBirthDate': 'child.dob',
-  'birth.child.placeOfBirth': 'child.placeOfBirth',
+  'birth.child.placeOfBirth': 'child.birthInstitution',
   'birth.child.birthLocation': 'child.birthLocation',
   'birth.child.attendantAtBirth': 'child.attendantAtBirth',
   'birth.child.birthType': 'child.birthType',
@@ -184,6 +184,18 @@ export const AGE_MAPPINGS: Record<
     'spouse.age': {
       age: data,
       asOfDateRef: 'eventDetails.date',
+    },
+  }),
+  'death.mother.ageOfIndividualInYears': (data: string) => ({
+    'mother.age': {
+      age: data,
+      asOfDateRef: 'child.dob',
+    },
+  }),
+  'death.father.ageOfIndividualInYears': (data: string) => ({
+    'father.age': {
+      age: data,
+      asOfDateRef: 'child.dob',
     },
   }),
 }
