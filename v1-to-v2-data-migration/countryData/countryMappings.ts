@@ -47,7 +47,6 @@ export const COUNTRY_FIELD_MAPPINGS = {
 'birth.dataMigration.dataMigration-view-group.legecyRegistrationNo':'legacyInfo.legacyBrn',
 'birth.dataMigration.dataMigration-view-group.legacyBirthPlace':'legacyInfo.legacyBirthPlace',
 'birth.dataMigration.dataMigration-view-group.legacyRegistrationDate':'legacyInfo.legacyRegistrationDate',
-
 'birth.dataMigration.dataMigration-view-group.legacyRecordStatus':'legacyInfo.legacyRecordStatus',
 'birth.dataMigration.dataMigration-view-group.migratedAt':'legacyInfo.migratedAt',
 'birth.dataMigration.dataMigration-view-group.migratedBy':'legacyInfo.migratedBy',

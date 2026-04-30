@@ -60,6 +60,28 @@ export function getCustomField(data: any, id: string): any {
   )?.value
 }
 
+/** V1 questionnaire values are often the strings "true"/"false"; v2 expects booleans. */
+export function coerceLegacyBoolean(value: unknown): boolean {
+  if (value === true || value === 'true') return true
+  return false
+}
+
+/** V1 questionnaire numeric fields are often strings; v2 expects integers. */
+export function coerceLegacyOptionalInt(value: unknown): number | undefined {
+  if (value === null || value === undefined) return undefined
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined
+    return Math.trunc(value)
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed === '') return undefined
+    const n = parseInt(trimmed, 10)
+    return Number.isNaN(n) ? undefined : n
+  }
+  return undefined
+}
+
 /**
  * Special informants have their own special sections like `mother.`, `father.` or `spouse.`.
  */

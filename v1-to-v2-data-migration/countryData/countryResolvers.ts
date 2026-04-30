@@ -1,13 +1,22 @@
-import { getCustomField, getDocument } from '../helpers/resolverUtils.ts'
+import {
+  coerceLegacyBoolean,
+  coerceLegacyOptionalInt,
+  getCustomField,
+  getDocument,
+} from '../helpers/resolverUtils.ts'
 import { EventRegistration } from '../helpers/types.ts'
 import { resolveAddress } from './addressResolver.ts'
 import { resolveName } from './nameResolver.ts'
 
 export const countryResolver = {
     'child.nonTonganBirth': (data: EventRegistration) =>
-        getCustomField(data, 'birth.child.child-view-group.nonTongan'),
+        coerceLegacyBoolean(
+            getCustomField(data, 'birth.child.child-view-group.nonTongan')
+        ),
     'child.foreignBirth': (data: EventRegistration) =>
-        getCustomField(data, 'birth.child.child-view-group.foreignBirth'),
+        coerceLegacyBoolean(
+            getCustomField(data, 'birth.child.child-view-group.foreignBirth')
+        ),
     'child.birthTime': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.birthTime'),
     'child.placeOfBirth': (data: EventRegistration) =>
@@ -19,7 +28,9 @@ export const countryResolver = {
     'child.attendantFirstName': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.attendantFirstName'),
     'child.birthOrder': (data: EventRegistration) =>
-        getCustomField(data, 'birth.child.child-view-group.birthOrder'),
+        coerceLegacyOptionalInt(
+            getCustomField(data, 'birth.child.child-view-group.birthOrder')
+        ),
     'child.fileNumber': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.fileNumber'),
     'child.grantingOfficialId': (data: EventRegistration) =>
@@ -39,7 +50,12 @@ export const countryResolver = {
     'mother.placeOfBirth': (data: EventRegistration) =>
         getCustomField(data, 'birth.mother.mother-view-group.motherBirthPlace'),
     'mother.numberOfChildrenExcludingThisBirth': (data: EventRegistration) =>
-        getCustomField(data, 'birth.mother.mother-view-group.numberOfChildrenExcludingThisBirth'),
+        coerceLegacyOptionalInt(
+            getCustomField(
+                data,
+                'birth.mother.mother-view-group.numberOfChildrenExcludingThisBirth'
+            )
+        ),
 
 
     'father.tongaPassId': (data: EventRegistration) =>
@@ -55,7 +71,7 @@ export const countryResolver = {
     'foreignRegistration.foreignRegistrationDate': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.foreignRegistrationDate'),
     'foreignRegistration.foreignBirthNote': (data: EventRegistration) =>
-        getCustomField(data, 'birth.child.child-view-group.birthnote'),
+        getCustomField(data, 'birth.child.child-view-group.birthnotebirthnote'),
     'foreignRegistration.foreignRegistrant': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.foreignInformantName'),
     'foreignRegistration.foreignRegistrantRelation': (data: EventRegistration) =>
@@ -79,13 +95,17 @@ export const countryResolver = {
     'legacyInfo.fatherMarriagePlace': (data: EventRegistration) =>
         getCustomField(data, 'birth.father.father-view-group.marriagePlace'),
     'legacyInfo.fatherAge': (data: EventRegistration) =>
-        getCustomField(data, 'birth.father.father-view-group.fatherAge'),
+        coerceLegacyOptionalInt(
+            getCustomField(data, 'birth.father.father-view-group.fatherAge')
+        ),
     'legacyInfo.motherMarriageDate': (data: EventRegistration) =>
         getCustomField(data, 'birth.mother.mother-view-group.marriageDate'),
     'legacyInfo.motherMarriagePlace': (data: EventRegistration) =>
         getCustomField(data, 'birth.mother.mother-view-group.marriagePlace'),
     'legacyInfo.motherAge': (data: EventRegistration) =>
-        getCustomField(data, 'birth.mother.mother-view-group.motherAge'),
+        coerceLegacyOptionalInt(
+            getCustomField(data, 'birth.mother.mother-view-group.motherAge')
+        ),
     'legacyInfo.legacyRecordStatus': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyRecordStatus'),
     'legacyInfo.migratedAt': (data: EventRegistration) =>
@@ -130,7 +150,9 @@ export const deathCountryResolver = {
     'deceased.foreignDeath': (data: EventRegistration) =>
         getCustomField(data, 'death.deceased.deceased-view-group.foreignDeath'),
     'deceased.nonTonganDeath': (data: EventRegistration) =>
-        getCustomField(data, 'death.deceased.deceased-view-group.nonTonganDeath'),
+        coerceLegacyBoolean(
+            getCustomField(data, 'death.deceased.deceased-view-group.nonTonganDeath')
+        ),
     'deceased.tongaPassId': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.deceasedTonganDigitalId'),
     'deceased.healthId': (data: EventRegistration) =>
@@ -140,7 +162,9 @@ export const deathCountryResolver = {
     'deceased.countryOfBirth': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.deceasedCountryOfBirth'),
     'deceased.numberOfChildren': (data: EventRegistration) =>
-        getCustomField(data,'death.deceased.deceased-view-group.numberOfChildren'),
+        coerceLegacyOptionalInt(
+            getCustomField(data, 'death.deceased.deceased-view-group.numberOfChildren')
+        ),
     'deceased.fileNumber': (data: EventRegistration) =>
         getCustomField(data, 'death.deceased.deceased-view-group.fileNumber'),
     'deceased.grantingOfficialId': (data: EventRegistration) =>
