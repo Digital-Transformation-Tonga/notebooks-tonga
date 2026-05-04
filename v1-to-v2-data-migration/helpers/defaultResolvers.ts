@@ -178,7 +178,7 @@ export const defaultDeathResolver: ResolverMap = {
     data.causeOfDeathMethod,
   'eventDetails.mannerOfDeath': (data: EventRegistration) =>
     mapMannerOfDeath(data.mannerOfDeath),
-  'eventDetails.placeOfDeath': (data: EventRegistration) =>
+  'eventDetails.placeOfDeathInstitution': (data: EventRegistration) =>
     data.eventLocation?.type,
   'eventDetails.deathLocation': (data: EventRegistration) =>
     data.eventLocation?.type === 'HEALTH_FACILITY'

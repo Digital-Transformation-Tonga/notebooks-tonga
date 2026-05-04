@@ -148,7 +148,9 @@ export const countryResolver = {
 /** Tonga v1 -> v2 custom-field resolvers for death; merged after `countryResolver` in `buildDeathResolver` so event-specific paths win. */
 export const deathCountryResolver = {
     'deceased.foreignDeath': (data: EventRegistration) =>
-        getCustomField(data, 'death.deceased.deceased-view-group.foreignDeath'),
+        coerceLegacyBoolean(
+            getCustomField(data, 'death.deceased.deceased-view-group.foreignDeath')
+        ),
     'deceased.nonTonganDeath': (data: EventRegistration) =>
         coerceLegacyBoolean(
             getCustomField(data, 'death.deceased.deceased-view-group.nonTonganDeath')
@@ -193,12 +195,16 @@ export const deathCountryResolver = {
 
     'eventDetails.placeOfDeath': (data: EventRegistration) =>
         getCustomField(data,'death.deathEvent.deathEvent-view-group.deathPlace'),
-    'eventDetails.stillBirth': (data: EventRegistration) =>
-        getCustomField(data,'death.deathEvent.deathEvent-view-group.isStillBirth'),
+    'eventDetails.stillBirth': (data: EventRegistration) => 
+        coerceLegacyBoolean(
+        getCustomField(data,'death.deathEvent.deathEvent-view-group.isStillBirth')
+    ),
     'eventDetails.timeOfDeath': (data: EventRegistration) =>
         getCustomField(data,'death.deathEvent.deathEvent-view-group.stillBirthTime'),
     'eventDetails.gestationalAge': (data: EventRegistration) =>
-        getCustomField(data,'death.deathEvent.deathEvent-view-group.deathEventGestationalAge'),
+        coerceLegacyOptionalInt(
+            getCustomField(data,'death.deathEvent.deathEvent-view-group.deathEventGestationalAge')
+        ),
 
     'informant.tongaPassId': (data: EventRegistration) =>
         getCustomField(data,'death.informant.informant-view-group.informantTonganDigitalId'),
@@ -244,7 +250,9 @@ export const deathCountryResolver = {
         getCustomField(data,'death.administrationSection.administrationSection-view-group.administrationSectionAdminNote'),
 
     'legacyInfo.ageMonths': (data: EventRegistration) =>
-        getCustomField(data, 'death.deceased.deceased-view-group.ageMonths'),
+        coerceLegacyOptionalInt(
+            getCustomField(data, 'death.deceased.deceased-view-group.ageMonths')
+        ),
     'legacyInfo.childrenLiving': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.childrenLiving'),
     'legacyInfo.akaFirstName': (data: EventRegistration) =>

@@ -69,7 +69,7 @@ export const DEFAULT_FIELD_MAPPINGS = {
     'eventDetails.causeOfDeathEstablished',
   'death.deathEvent.causeOfDeathMethod': 'eventDetails.sourceCauseDeath',
   'death.deathEvent.deathDescription': 'eventDetails.description',
-  'death.deathEvent.placeOfDeath': 'eventDetails.placeOfDeath',
+  'death.deathEvent.placeOfDeath': 'eventDetails.placeOfDeathInstitution',
   'death.deathEvent.deathLocation': 'eventDetails.deathLocation',
 
   'death.informant.informantType': 'informant.relation',
