@@ -73,7 +73,7 @@ export const COUNTRY_FIELD_MAPPINGS = {
 'death.deceased.deceased-view-group.placeOfBirth': 'deceased.birthPlace',
 'death.deceased.deceased-view-group.deceasedCountryOfBirth': 'deceased.countryOfBirth',
 'death.deceased.deceased-view-group.numberOfChildren': 'deceased.numberOfChildren',
-'death.deceased.deceased-view-group.healthId':'deceased.healthId',
+'death.deceased.deceased-view-group.healthId':'legacyInfo.healthId',
 'death.deceased.deceased-view-group.fileNumber': 'deceased.fileNumber',
 'death.deceased.deceased-view-group.grantingOfficialId':'deceased.grantingOfficialId',
 'death.deceased.deceased-view-group.grantDate':'deceased.grantDate',

@@ -311,6 +311,17 @@ Deno.test('FAR address tests - death events', async (t) => {
   })
 
   await t.step(
+    'should default mother.addressSameAs to NO for death migration',
+    () => {
+      const data = buildDeathEventRegistration()
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(declareAction?.declaration['mother.addressSameAs'], 'NO')
+    }
+  )
+
+  await t.step(
     'should resolve spouse.addressSameAs when addresses match',
     () => {
       const sharedAddress = {

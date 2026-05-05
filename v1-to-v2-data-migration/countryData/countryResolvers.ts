@@ -157,8 +157,6 @@ export const deathCountryResolver = {
         ),
     'deceased.tongaPassId': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.deceasedTonganDigitalId'),
-    'deceased.healthId': (data: EventRegistration) =>
-        getCustomField(data, 'death.deceased.deceased-view-group.healthId'),
     'deceased.birthPlace': (data: EventRegistration) =>
         getCustomField(data, 'death.deceased.deceased-view-group.placeOfBirth'),
     'deceased.countryOfBirth': (data: EventRegistration) =>
@@ -225,6 +223,8 @@ export const deathCountryResolver = {
     'mother.dob': (data: EventRegistration) => data.mother?.birthDate,
     'mother.dobUnknown': (data: EventRegistration) =>data.mother?.exactDateOfBirthUnknown,
     'mother.address': (data: EventRegistration) =>resolveAddress(data, data.mother?.address?.[0]),
+    // Legacy death form did not have mother.addressSameAs; default to "No" in v2.
+    'mother.addressSameAs': (_data: EventRegistration) => 'NO',
 
 
     'father.tongaPassId': (data: EventRegistration) =>
@@ -249,6 +249,8 @@ export const deathCountryResolver = {
     'administration.comments': (data: EventRegistration) =>
         getCustomField(data,'death.administrationSection.administrationSection-view-group.administrationSectionAdminNote'),
 
+    'legacyInfo.healthId': (data: EventRegistration) =>
+        getCustomField(data, 'death.deceased.deceased-view-group.healthId'),
     'legacyInfo.ageMonths': (data: EventRegistration) =>
         coerceLegacyOptionalInt(
             getCustomField(data, 'death.deceased.deceased-view-group.ageMonths')
