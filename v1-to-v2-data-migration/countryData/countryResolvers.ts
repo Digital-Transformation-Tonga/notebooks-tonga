@@ -295,7 +295,7 @@ export const deathCountryResolver = {
         getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyRecordTypeDescription'),
 
 
-    'documents.proofOfOther': (data: EventRegistration) =>getDocument(data, 'OTHER'),
+    'documents.proofOfOther': (data: EventRegistration) =>getDocument(data, 'DECEASED_OTHER_PROOF'),
 }
 
 // The V1 response will populate both the informant and special informant fields
