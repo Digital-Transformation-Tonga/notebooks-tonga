@@ -69,10 +69,11 @@ export interface AddressLine {
 // Name types
 export interface Name {
   firstname?: string
-  middleName?: string
+  middlename?: string
   surname?: string
   firstNames?: string
   familyName?: string
+  middleName?: string
 }
 
 // Person types

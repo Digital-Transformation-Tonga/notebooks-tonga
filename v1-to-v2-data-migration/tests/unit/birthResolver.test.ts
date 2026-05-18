@@ -55,7 +55,7 @@ Deno.test('birthResolver - child fields', async (t) => {
     assertEquals(declareAction?.declaration['child.dob'], '2024-01-15')
   })
 
-  await t.step('should resolve child.placeOfBirth', () => {
+  await t.step('should resolve child.birthInstitution for HEALTH_FACILITY', () => {
     const registration = buildBirthEventRegistration({
       eventLocation: { type: 'HEALTH_FACILITY', id: 'facility1' },
     })
@@ -64,7 +64,7 @@ Deno.test('birthResolver - child fields', async (t) => {
     const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
     assertEquals(
-      declareAction?.declaration['child.placeOfBirth'],
+      declareAction?.declaration['child.birthInstitution'],
       'HEALTH_FACILITY'
     )
   })
@@ -135,6 +135,78 @@ Deno.test('birthResolver - child fields', async (t) => {
     )
   })
 
+  await t.step('should omit child.nonTonganBirth when not explicitly true', () => {
+    const registration = buildBirthEventRegistration({
+      questionnaire: [
+        {
+          fieldId: 'birth.child.child-view-group.nonTongan',
+          value: 'false',
+        },
+      ],
+    })
+
+    const result = transform(registration, birthResolver, 'birth')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['child.nonTonganBirth'], undefined)
+  })
+
+  await t.step('should resolve child.nonTonganBirth when explicitly true', () => {
+    const registration = buildBirthEventRegistration({
+      questionnaire: [
+        {
+          fieldId: 'birth.child.child-view-group.nonTongan',
+          value: 'true',
+        },
+      ],
+    })
+
+    const result = transform(registration, birthResolver, 'birth')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['child.nonTonganBirth'], true)
+  })
+
+  await t.step('should omit child.foreignBirth when non-Tongan birth', () => {
+    const registration = buildBirthEventRegistration({
+      questionnaire: [
+        {
+          fieldId: 'birth.child.child-view-group.nonTongan',
+          value: 'true',
+        },
+        {
+          fieldId: 'birth.child.child-view-group.foreignBirth',
+          value: 'false',
+        },
+      ],
+    })
+
+    const result = transform(registration, birthResolver, 'birth')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['child.foreignBirth'], undefined)
+  })
+
+  await t.step('should resolve child.foreignBirth when Tongan birth path', () => {
+    const registration = buildBirthEventRegistration({
+      questionnaire: [
+        {
+          fieldId: 'birth.child.child-view-group.nonTongan',
+          value: 'false',
+        },
+        {
+          fieldId: 'birth.child.child-view-group.foreignBirth',
+          value: 'true',
+        },
+      ],
+    })
+
+    const result = transform(registration, birthResolver, 'birth')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['child.foreignBirth'], true)
+  })
+
   await t.step('should resolve child.nid', () => {
     const registration = buildBirthEventRegistration({
       child: {
@@ -150,7 +222,7 @@ Deno.test('birthResolver - child fields', async (t) => {
 })
 
 Deno.test('birthResolver - mother fields', async (t) => {
-  await t.step('should resolve mother.detailsNotAvailable when false', () => {
+  await t.step('should omit mother.detailsNotAvailable when mother has details', () => {
     const registration = buildBirthEventRegistration({
       mother: { detailsExist: true },
     })
@@ -160,7 +232,7 @@ Deno.test('birthResolver - mother fields', async (t) => {
 
     assertEquals(
       declareAction?.declaration['mother.detailsNotAvailable'],
-      false
+      undefined
     )
   })
 
@@ -377,7 +449,7 @@ Deno.test('birthResolver - mother fields', async (t) => {
 })
 
 Deno.test('birthResolver - father fields', async (t) => {
-  await t.step('should resolve father.detailsNotAvailable', () => {
+  await t.step('should resolve father.detailsNotAvailable when true', () => {
     const registration = buildBirthEventRegistration({
       father: { detailsExist: false },
     })
@@ -386,6 +458,20 @@ Deno.test('birthResolver - father fields', async (t) => {
     const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
     assertEquals(declareAction?.declaration['father.detailsNotAvailable'], true)
+  })
+
+  await t.step('should omit father.detailsNotAvailable when father has details', () => {
+    const registration = buildBirthEventRegistration({
+      father: { detailsExist: true, birthDate: '1980-01-01' },
+    })
+
+    const result = transform(registration, birthResolver, 'birth')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(
+      declareAction?.declaration['father.detailsNotAvailable'],
+      undefined
+    )
   })
 
   await t.step('should resolve father.reason', () => {

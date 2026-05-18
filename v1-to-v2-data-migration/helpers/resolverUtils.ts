@@ -5,6 +5,7 @@ import {
 import {
   Identifier,
   Document,
+  EventRegistration,
   ProcessedDocumentWithOptionType,
   PersonWithIdentifiers,
   ProcessedDocument,
@@ -85,6 +86,23 @@ export function coerceLegacyOptionalInt(value: unknown): number | undefined {
 /**
  * Special informants have their own special sections like `mother.`, `father.` or `spouse.`.
  */
+/** True when v1 stored the same primary address on father and mother (v2: father.addressSameAs = YES). */
+export function isFatherAddressSameAsMother(data: EventRegistration): boolean {
+  return (
+    JSON.stringify(data.father?.address?.[0]) ===
+    JSON.stringify(data.mother?.address?.[0])
+  )
+}
+
+/** v2 hides father.addressSameAs when father or mother details are marked not available. */
+export function shouldEmitFatherAddressSameAs(
+  data: EventRegistration
+): boolean {
+  if (data.father?.detailsExist === false) return false
+  if (data.mother?.detailsExist === false) return false
+  return true
+}
+
 export const isSpecialInformant = (
   informant: PersonWithIdentifiers | undefined,
   eventType: 'birth' | 'death'

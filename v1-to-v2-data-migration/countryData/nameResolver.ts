@@ -7,7 +7,7 @@ export const resolveName = (
   name
     ? {
         firstname: name?.firstNames,
-        middleName: name?.middleName,
+        middlename: name?.middleName,
         surname: name?.familyName,
         /* For potential custom field
         grandfatherName: getCustomField(data, 'birth.child.grandfatherName'),

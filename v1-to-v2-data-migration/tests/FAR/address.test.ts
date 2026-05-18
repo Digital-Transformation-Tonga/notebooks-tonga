@@ -145,6 +145,7 @@ Deno.test('FAR address tests - birth events', async (t) => {
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
       assertEquals(declareAction?.declaration['father.addressSameAs'], 'YES')
+      assertEquals(declareAction?.declaration['father.address'], undefined)
     }
   )
 
@@ -178,6 +179,77 @@ Deno.test('FAR address tests - birth events', async (t) => {
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
       assertEquals(declareAction?.declaration['father.addressSameAs'], 'NO')
+    }
+  )
+
+  await t.step(
+    'should omit father.addressSameAs when mother details not available',
+    () => {
+      const registration = buildBirthEventRegistration({
+        mother: { detailsExist: false, reasonNotApplying: 'Unknown' },
+        father: {
+          detailsExist: true,
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['20', 'Father Ave'],
+              country: 'FAR',
+              district: 'District2',
+            },
+          ],
+        },
+      })
+
+      const result = transform(registration, birthResolver, 'birth')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['father.addressSameAs'],
+        undefined
+      )
+      assertEquals(
+        declareAction?.declaration['mother.detailsNotAvailable'],
+        true
+      )
+    }
+  )
+
+  await t.step(
+    'should omit father.addressSameAs when father details not available',
+    () => {
+      const registration = buildBirthEventRegistration({
+        mother: {
+          detailsExist: true,
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['10', 'Mother St'],
+              country: 'FAR',
+              district: 'District1',
+            },
+          ],
+        },
+        father: {
+          detailsExist: false,
+          reasonNotApplying: 'Unknown',
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['20', 'Father Ave'],
+              country: 'FAR',
+              district: 'District2',
+            },
+          ],
+        },
+      })
+
+      const result = transform(registration, birthResolver, 'birth')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['father.addressSameAs'],
+        undefined
+      )
     }
   )
 

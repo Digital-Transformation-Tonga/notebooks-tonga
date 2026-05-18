@@ -3,7 +3,9 @@ import {
   getDocument,
   getDocuments,
   getIdentifier,
+  isFatherAddressSameAsMother,
   isSpecialInformant,
+  shouldEmitFatherAddressSameAs,
 } from './resolverUtils.ts'
 import {
   COUNTRY_PHONE_CODE,
@@ -298,8 +300,9 @@ export const defaultBirthResolver: ResolverMap = {
    * foetalDeathsToMother
    * lastPreviousLiveBirth
    */
+  /** Only emit when true; `false` is omitted so v2 forms do not reject hidden toggles. */
   'mother.detailsNotAvailable': (data: EventRegistration) =>
-    !data.mother?.detailsExist,
+    data.mother?.detailsExist === false ? true : undefined,
   'mother.reason': (data: EventRegistration) => data.mother?.reasonNotApplying,
   'mother.name': (data: EventRegistration) =>
     resolveName(data, data.mother?.name?.[0]),
@@ -323,7 +326,7 @@ export const defaultBirthResolver: ResolverMap = {
   'mother.address': (data: EventRegistration) =>
     resolveAddress(data, data.mother?.address?.[0]),
   'father.detailsNotAvailable': (data: EventRegistration) =>
-    !data.father?.detailsExist,
+    data.father?.detailsExist === false ? true : undefined,
   // @question, is this the right field?
   'father.reason': (data: EventRegistration) => data.father?.reasonNotApplying,
   'father.name': (data: EventRegistration) =>
@@ -343,15 +346,21 @@ export const defaultBirthResolver: ResolverMap = {
   'father.educationalAttainment': (data: EventRegistration) =>
     data.father?.educationalAttainment,
   'father.occupation': (data: EventRegistration) => data.father?.occupation,
-  'father.address': (data: EventRegistration) =>
-    resolveAddress(data, data.father?.address?.[0]),
-  // @todo this is a nasty one as it never was a field in the database
-  // but instead a computed field that just copied mothers address data for father as
-  'father.addressSameAs': (data: EventRegistration) =>
-    JSON.stringify(data.father?.address?.[0]) ===
-    JSON.stringify(data.mother?.address?.[0])
-      ? 'YES'
-      : 'NO',
+  'father.address': (data: EventRegistration) => {
+    if (data.father?.detailsExist === false) return undefined
+    // v2 hides father.address when same as mother; values there fail correction validation
+    if (
+      data.mother?.detailsExist !== false &&
+      isFatherAddressSameAsMother(data)
+    ) {
+      return null
+    }
+    return resolveAddress(data, data.father?.address?.[0])
+  },
+  'father.addressSameAs': (data: EventRegistration) => {
+    if (!shouldEmitFatherAddressSameAs(data)) return undefined
+    return isFatherAddressSameAsMother(data) ? 'YES' : 'NO'
+  },
 
   // @todo
   // PARENT: 'PARENT',

@@ -3,20 +3,35 @@ import {
   coerceLegacyOptionalInt,
   getCustomField,
   getDocument,
+  isFatherAddressSameAsMother,
+  shouldEmitFatherAddressSameAs,
 } from '../helpers/resolverUtils.ts'
 import { EventRegistration } from '../helpers/types.ts'
 import { resolveAddress } from './addressResolver.ts'
 import { resolveName } from './nameResolver.ts'
 
 export const countryResolver = {
-    'child.nonTonganBirth': (data: EventRegistration) =>
-        coerceLegacyBoolean(
-            getCustomField(data, 'birth.child.child-view-group.nonTongan')
-        ),
-    'child.foreignBirth': (data: EventRegistration) =>
-        coerceLegacyBoolean(
-            getCustomField(data, 'birth.child.child-view-group.foreignBirth')
-        ),
+    /** Only emit when true; omit `false` so v2 does not send values for hidden toggles. */
+    'child.nonTonganBirth': (data: EventRegistration) => {
+        const raw = getCustomField(data, 'birth.child.child-view-group.nonTongan')
+        if (raw === true || raw === 'true') return true
+        return undefined
+    },
+    /** Omit when non-Tongan path hides this field; omit when legacy never set it (avoid `false` on hidden fields). */
+    'child.foreignBirth': (data: EventRegistration) => {
+        const nonTonganRaw = getCustomField(
+            data,
+            'birth.child.child-view-group.nonTongan'
+        )
+        if (coerceLegacyBoolean(nonTonganRaw)) return undefined
+        const foreignRaw = getCustomField(
+            data,
+            'birth.child.child-view-group.foreignBirth'
+        )
+        if (foreignRaw === null || foreignRaw === undefined || foreignRaw === '')
+            return undefined
+        return coerceLegacyBoolean(foreignRaw)
+    },
     'child.birthTime': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.birthTime'),
     'child.placeOfBirth': (data: EventRegistration) =>
@@ -141,20 +156,41 @@ export const countryResolver = {
 
 
     'documents.proofOtherBirthDocuments': (data: EventRegistration) =>
-    getDocument(data, 'OTHER'),
+    getDocument(data, 'BIRTH_OTHER_PROOF'),
 
 }
 
 /** Tonga v1 -> v2 custom-field resolvers for death; merged after `countryResolver` in `buildDeathResolver` so event-specific paths win. */
 export const deathCountryResolver = {
-    'deceased.foreignDeath': (data: EventRegistration) =>
-        coerceLegacyBoolean(
-            getCustomField(data, 'death.deceased.deceased-view-group.foreignDeath')
-        ),
-    'deceased.nonTonganDeath': (data: EventRegistration) =>
-        coerceLegacyBoolean(
-            getCustomField(data, 'death.deceased.deceased-view-group.nonTonganDeath')
-        ),
+    /** Omit when non-Tongan path hides this field; omit when legacy never set it. */
+    'deceased.foreignDeath': (data: EventRegistration) => {
+        const nonTonganRaw = getCustomField(
+            data,
+            'death.deceased.deceased-view-group.nonTonganDeath'
+        )
+        if (nonTonganRaw === true || nonTonganRaw === 'true') return undefined
+        const foreignRaw = getCustomField(
+            data,
+            'death.deceased.deceased-view-group.foreignDeath'
+        )
+        if (
+            foreignRaw === null ||
+            foreignRaw === undefined ||
+            foreignRaw === ''
+        ) {
+            return undefined
+        }
+        return coerceLegacyBoolean(foreignRaw)
+    },
+    /** Only emit when true; omit `false` so v2 does not send values for hidden toggles. */
+    'deceased.nonTonganDeath': (data: EventRegistration) => {
+        const raw = getCustomField(
+            data,
+            'death.deceased.deceased-view-group.nonTonganDeath'
+        )
+        if (raw === true || raw === 'true') return true
+        return undefined
+    },
     'deceased.tongaPassId': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.deceasedTonganDigitalId'),
     'deceased.birthPlace': (data: EventRegistration) =>
@@ -218,7 +254,8 @@ export const deathCountryResolver = {
         getCustomField(data,'death.mother.mother-view-group.motherTonganDigitalId'),
     'mother.placeOfBirth': (data: EventRegistration) =>
         getCustomField(data,'death.mother.mother-view-group.placeOfBirth'),
-    'mother.detailsNotAvailable': (data: EventRegistration) =>!data.mother?.detailsExist,
+    'mother.detailsNotAvailable': (data: EventRegistration) =>
+        data.mother?.detailsExist === false ? true : undefined,
     'mother.reason': (data: EventRegistration) => data.mother?.reasonNotApplying,
     'mother.dob': (data: EventRegistration) => data.mother?.birthDate,
     'mother.dobUnknown': (data: EventRegistration) =>data.mother?.exactDateOfBirthUnknown,
@@ -232,13 +269,25 @@ export const deathCountryResolver = {
     'father.name': (data: EventRegistration) =>resolveName(data, data.father?.name?.[0]),
     'father.placeOfBirth': (data: EventRegistration) =>
         getCustomField(data,'death.father.father-view-group.placeOfBirth'),
-    'father.detailsNotAvailable': (data: EventRegistration) =>!data.father?.detailsExist,
+    'father.detailsNotAvailable': (data: EventRegistration) =>
+        data.father?.detailsExist === false ? true : undefined,
     'father.reason': (data: EventRegistration) => data.father?.reasonNotApplying,
     'father.dob': (data: EventRegistration) => data.father?.birthDate,
     'father.dobUnknown': (data: EventRegistration) =>data.father?.exactDateOfBirthUnknown,
-    'father.address': (data: EventRegistration) =>resolveAddress(data, data.father?.address?.[0]),
-    'father.addressSameAs': (data: EventRegistration) =>
-        JSON.stringify(data.father?.address?.[0]) ===JSON.stringify(data.mother?.address?.[0])? 'YES': 'NO',
+    'father.address': (data: EventRegistration) => {
+        if (data.father?.detailsExist === false) return undefined
+        if (
+            data.mother?.detailsExist !== false &&
+            isFatherAddressSameAsMother(data)
+        ) {
+            return null
+        }
+        return resolveAddress(data, data.father?.address?.[0])
+    },
+    'father.addressSameAs': (data: EventRegistration) => {
+        if (!shouldEmitFatherAddressSameAs(data)) return undefined
+        return isFatherAddressSameAsMother(data) ? 'YES' : 'NO'
+    },
 
     'registration.ministerFirstName': (data: EventRegistration) =>
         getCustomField(data,'death.registrationInfo.registrationInfo-view-group.registrationInfomFirstName'),

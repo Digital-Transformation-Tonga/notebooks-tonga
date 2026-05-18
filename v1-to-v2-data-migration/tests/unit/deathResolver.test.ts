@@ -93,6 +93,82 @@ Deno.test('deathResolver - deceased fields', async (t) => {
     assertEquals(declareAction?.declaration['deceased.idType'], 'NATIONAL_ID')
   })
 
+  await t.step('should omit deceased.nonTonganDeath when not explicitly true', () => {
+    const base = buildDeathEventRegistration()
+    const data = buildDeathEventRegistration({
+      questionnaire: [
+        ...(base.questionnaire ?? []),
+        {
+          fieldId: 'death.deceased.deceased-view-group.nonTonganDeath',
+          value: 'false',
+        },
+      ],
+    })
+    const result = transform(data, deathResolver, 'death')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['deceased.nonTonganDeath'], undefined)
+  })
+
+  await t.step('should resolve deceased.nonTonganDeath when explicitly true', () => {
+    const base = buildDeathEventRegistration()
+    const data = buildDeathEventRegistration({
+      questionnaire: [
+        ...(base.questionnaire ?? []),
+        {
+          fieldId: 'death.deceased.deceased-view-group.nonTonganDeath',
+          value: 'true',
+        },
+      ],
+    })
+    const result = transform(data, deathResolver, 'death')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['deceased.nonTonganDeath'], true)
+  })
+
+  await t.step('should omit deceased.foreignDeath when non-Tongan death', () => {
+    const base = buildDeathEventRegistration()
+    const data = buildDeathEventRegistration({
+      questionnaire: [
+        ...(base.questionnaire ?? []),
+        {
+          fieldId: 'death.deceased.deceased-view-group.nonTonganDeath',
+          value: 'true',
+        },
+        {
+          fieldId: 'death.deceased.deceased-view-group.foreignDeath',
+          value: 'false',
+        },
+      ],
+    })
+    const result = transform(data, deathResolver, 'death')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['deceased.foreignDeath'], undefined)
+  })
+
+  await t.step('should resolve deceased.foreignDeath when Tongan path and set', () => {
+    const base = buildDeathEventRegistration()
+    const data = buildDeathEventRegistration({
+      questionnaire: [
+        ...(base.questionnaire ?? []),
+        {
+          fieldId: 'death.deceased.deceased-view-group.nonTonganDeath',
+          value: 'false',
+        },
+        {
+          fieldId: 'death.deceased.deceased-view-group.foreignDeath',
+          value: 'true',
+        },
+      ],
+    })
+    const result = transform(data, deathResolver, 'death')
+    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+    assertEquals(declareAction?.declaration['deceased.foreignDeath'], true)
+  })
+
   await t.step('should resolve deceased.nid', () => {
     const data = buildDeathEventRegistration()
     const result = transform(data, deathResolver, 'death')
