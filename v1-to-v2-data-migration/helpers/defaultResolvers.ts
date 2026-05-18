@@ -4,8 +4,15 @@ import {
   getDocuments,
   getIdentifier,
   isFatherAddressSameAsMother,
+  isInformantAddressSameAsDeceased,
   isSpecialInformant,
+  isSpouseAddressSameAsDeceased,
+  isSpouseSectionVisible,
   shouldEmitFatherAddressSameAs,
+  shouldEmitInformantAddressSameAs,
+  shouldEmitInformantPersonalDetailFields,
+  shouldEmitSpouseAddressSameAs,
+  shouldEmitSpouseDetailFields,
 } from './resolverUtils.ts'
 import {
   COUNTRY_PHONE_CODE,
@@ -24,10 +31,18 @@ const informantResolver: ResolverMap = {
   'informant.address': (
     data: EventRegistration,
     eventType: 'birth' | 'death'
-  ) =>
-    !isSpecialInformant(data.informant, eventType)
-      ? resolveAddress(data, data.informant?.address?.[0])
-      : undefined, // type: FieldType.ADDRESS,
+  ) => {
+    if (!shouldEmitInformantPersonalDetailFields(data, eventType)) {
+      return undefined
+    }
+    if (
+      eventType === 'death' &&
+      isInformantAddressSameAsDeceased(data)
+    ) {
+      return null
+    }
+    return resolveAddress(data, data.informant?.address?.[0])
+  },
   // @question, is informant.telecom correct or this?
   'informant.phoneNo': (
     data: EventRegistration,
@@ -190,46 +205,71 @@ export const defaultDeathResolver: ResolverMap = {
     data.eventLocation?.type === 'OTHER'
       ? resolveAddress(data, data.eventLocation.address)
       : null,
-  'informant.addressSameAs': (data: EventRegistration) =>
-    JSON.stringify(data.informant?.address?.[0]) ===
-    JSON.stringify(data.deceased?.address?.[0])
-      ? 'YES'
-      : 'NO',
+  'informant.addressSameAs': (
+    data: EventRegistration,
+    eventType: 'birth' | 'death'
+  ) => {
+    if (!shouldEmitInformantAddressSameAs(data, eventType)) return undefined
+    return isInformantAddressSameAsDeceased(data) ? 'YES' : 'NO'
+  },
   'informant.idType': (data: EventRegistration) =>
     getCustomField(
       data,
       'death.informant.informant-view-group.informantIdType'
     ),
-  'spouse.detailsNotAvailable': (data: EventRegistration) =>
-    !data.spouse?.detailsExist,
-  'spouse.reason': (data: EventRegistration) => data.spouse?.reasonNotApplying,
+  'spouse.detailsNotAvailable': (data: EventRegistration) => {
+    if (!isSpouseSectionVisible(data)) return undefined
+    return data.spouse?.detailsExist === false ? true : undefined
+  },
+  'spouse.reason': (data: EventRegistration) =>
+    isSpouseSectionVisible(data) ? data.spouse?.reasonNotApplying : undefined,
   'spouse.name': (data: EventRegistration) =>
-    resolveName(data, data.spouse?.name?.[0]),
-  'spouse.dob': (data: EventRegistration) => data.spouse?.birthDate,
+    shouldEmitSpouseDetailFields(data)
+      ? resolveName(data, data.spouse?.name?.[0])
+      : undefined,
+  'spouse.dob': (data: EventRegistration) =>
+    shouldEmitSpouseDetailFields(data) ? data.spouse?.birthDate : undefined,
   'spouse.dobUnknown': (data: EventRegistration) =>
-    data.spouse?.exactDateOfBirthUnknown,
+    shouldEmitSpouseDetailFields(data)
+      ? data.spouse?.exactDateOfBirthUnknown
+      : undefined,
   'spouse.age': (data: EventRegistration) =>
-    data.spouse?.ageOfIndividualInYears && {
-      age: data.spouse?.ageOfIndividualInYears,
-      asOfDateRef: 'eventDetails.date',
-    },
+    shouldEmitSpouseDetailFields(data) &&
+    data.spouse?.ageOfIndividualInYears
+      ? {
+          age: data.spouse?.ageOfIndividualInYears,
+          asOfDateRef: 'eventDetails.date',
+        }
+      : undefined,
   'spouse.nationality': (data: EventRegistration) =>
-    data.spouse?.nationality?.[0],
+    shouldEmitSpouseDetailFields(data)
+      ? data.spouse?.nationality?.[0]
+      : undefined,
   'spouse.idType': (data: EventRegistration) =>
-    getCustomField(data, 'death.spouse.spouse-view-group.spouseIdType'),
+    shouldEmitSpouseDetailFields(data)
+      ? getCustomField(data, 'death.spouse.spouse-view-group.spouseIdType')
+      : undefined,
   'spouse.nid': (data: EventRegistration) =>
-    getIdentifier(data.spouse, 'NATIONAL_ID'),
+    shouldEmitSpouseDetailFields(data)
+      ? getIdentifier(data.spouse, 'NATIONAL_ID')
+      : undefined,
   'spouse.passport': (data: EventRegistration) =>
-    getIdentifier(data.spouse, 'PASSPORT'),
+    shouldEmitSpouseDetailFields(data)
+      ? getIdentifier(data.spouse, 'PASSPORT')
+      : undefined,
   'spouse.brn': (data: EventRegistration) =>
-    getIdentifier(data.spouse, 'BIRTH_REGISTRATION_NUMBER'),
-  'spouse.address': (data: EventRegistration) =>
-    resolveAddress(data, data.spouse?.address?.[0]),
-  'spouse.addressSameAs': (data: EventRegistration) =>
-    JSON.stringify(data.deceased?.address?.[0]) ===
-    JSON.stringify(data.spouse?.address?.[0])
-      ? 'YES'
-      : 'NO',
+    shouldEmitSpouseDetailFields(data)
+      ? getIdentifier(data.spouse, 'BIRTH_REGISTRATION_NUMBER')
+      : undefined,
+  'spouse.address': (data: EventRegistration) => {
+    if (!shouldEmitSpouseDetailFields(data)) return undefined
+    if (isSpouseAddressSameAsDeceased(data)) return null
+    return resolveAddress(data, data.spouse?.address?.[0])
+  },
+  'spouse.addressSameAs': (data: EventRegistration) => {
+    if (!shouldEmitSpouseAddressSameAs(data)) return undefined
+    return isSpouseAddressSameAsDeceased(data) ? 'YES' : 'NO'
+  },
 
   // MOSIP E-Signet / ID Auth verification fields
   'deceased.verified': (data: EventRegistration) =>
@@ -243,10 +283,12 @@ export const defaultDeathResolver: ResolverMap = {
       'death.informant.informant-view-group.verified'
     ),
   'spouse.verified': (data: EventRegistration) =>
-    getCustomFieldVerificationStatus(
-      data,
-      'death.spouse.spouse-view-group.verified'
-    ),
+    shouldEmitSpouseDetailFields(data)
+      ? getCustomFieldVerificationStatus(
+          data,
+          'death.spouse.spouse-view-group.verified'
+        )
+      : undefined,
   
   'mother.age': (data: EventRegistration) =>
     data.mother?.ageOfIndividualInYears && {

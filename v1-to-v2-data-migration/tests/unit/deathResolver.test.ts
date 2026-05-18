@@ -583,16 +583,45 @@ Deno.test('deathResolver - informant fields', async (t) => {
 })
 
 Deno.test('deathResolver - spouse fields', async (t) => {
-  await t.step('should resolve spouse.detailsNotAvailable when false', () => {
-    const data = buildDeathEventRegistration()
-    const result = transform(data, deathResolver, 'death')
-    const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+  await t.step(
+    'should omit spouse.detailsNotAvailable when spouse details exist',
+    () => {
+      const data = buildDeathEventRegistration()
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
-    assertEquals(
-      declareAction?.declaration['spouse.detailsNotAvailable'],
-      false
-    )
-  })
+      assertEquals(
+        declareAction?.declaration['spouse.detailsNotAvailable'],
+        undefined
+      )
+    }
+  )
+
+  await t.step(
+    'should omit spouse fields when deceased is not married',
+    () => {
+      const data = buildDeathEventRegistration({
+        deceased: {
+          ...buildDeathEventRegistration().deceased!,
+          maritalStatus: 'SINGLE',
+        },
+        spouse: {
+          detailsExist: false,
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['spouse.detailsNotAvailable'],
+        undefined
+      )
+      assertEquals(
+        declareAction?.declaration['spouse.addressSameAs'],
+        undefined
+      )
+    }
+  )
 
   await t.step('should resolve spouse.detailsNotAvailable when true', () => {
     const data = buildDeathEventRegistration({

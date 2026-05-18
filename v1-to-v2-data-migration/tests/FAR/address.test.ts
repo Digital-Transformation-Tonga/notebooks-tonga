@@ -346,6 +346,50 @@ Deno.test('FAR address tests - death events', async (t) => {
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
       assertEquals(declareAction?.declaration['informant.addressSameAs'], 'YES')
+      assertEquals(declareAction?.declaration['informant.address'], undefined)
+    }
+  )
+
+  await t.step(
+    'should omit informant.address when legacy same-as-deceased is true',
+    () => {
+      const data = buildDeathEventRegistration({
+        questionnaire: [
+          {
+            fieldId: 'death.informant.primaryAddressSameAsOtherPrimary',
+            value: true,
+          },
+        ],
+        deceased: {
+          ...buildDeathEventRegistration().deceased!,
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['1', 'Main'],
+              district: 'ff1d4a0f-d0cb-47a5-b2ce-7df409b7168d',
+              state: 'State1',
+              country: 'TON',
+            },
+          ],
+        },
+        informant: {
+          ...buildDeathEventRegistration().informant!,
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['99', 'Other'],
+              district: 'different-district-id',
+              state: 'State2',
+              country: 'TON',
+            },
+          ],
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(declareAction?.declaration['informant.addressSameAs'], 'YES')
+      assertEquals(declareAction?.declaration['informant.address'], undefined)
     }
   )
 
@@ -357,6 +401,87 @@ Deno.test('FAR address tests - death events', async (t) => {
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
       assertEquals(declareAction?.declaration['informant.addressSameAs'], 'NO')
+    }
+  )
+
+  await t.step(
+    'should omit informant.addressSameAs when informant is spouse',
+    () => {
+      const data = buildDeathEventRegistration({
+        informant: {
+          ...buildDeathEventRegistration().informant!,
+          relationship: 'SPOUSE',
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['informant.addressSameAs'],
+        undefined
+      )
+    }
+  )
+
+  await t.step(
+    'should omit informant.addressSameAs when informant has no personal details',
+    () => {
+      const data = buildDeathEventRegistration({
+        informant: {
+          relationship: 'OTHER',
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['informant.addressSameAs'],
+        undefined
+      )
+    }
+  )
+
+  await t.step(
+    'should omit informant.address when informant has only registration contact',
+    () => {
+      const data = buildDeathEventRegistration({
+        informant: {
+          relationship: 'SON',
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['copied from deceased'],
+              district: 'District1',
+              state: 'State1',
+              country: 'FAR',
+            },
+          ],
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(declareAction?.declaration['informant.address'], undefined)
+      assertEquals(
+        declareAction?.declaration['informant.addressSameAs'],
+        undefined
+      )
+    }
+  )
+
+  await t.step(
+    'should omit informant.address when informant is spouse',
+    () => {
+      const data = buildDeathEventRegistration({
+        informant: {
+          ...buildDeathEventRegistration().informant!,
+          relationship: 'SPOUSE',
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(declareAction?.declaration['informant.address'], undefined)
     }
   )
 
@@ -383,9 +508,43 @@ Deno.test('FAR address tests - death events', async (t) => {
   })
 
   await t.step(
-    'should default mother.addressSameAs to NO for death migration',
+    'should omit mother.addressSameAs when mother details not available',
     () => {
-      const data = buildDeathEventRegistration()
+      const data = buildDeathEventRegistration({
+        mother: { detailsExist: false, reasonNotApplying: 'Unknown' },
+        father: { detailsExist: false },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['mother.addressSameAs'],
+        undefined
+      )
+      assertEquals(
+        declareAction?.declaration['father.addressSameAs'],
+        undefined
+      )
+    }
+  )
+
+  await t.step(
+    'should resolve mother.addressSameAs when mother details exist',
+    () => {
+      const data = buildDeathEventRegistration({
+        mother: {
+          detailsExist: true,
+          address: [
+            {
+              type: 'PRIMARY_ADDRESS',
+              line: ['456 Oak Ave'],
+              district: 'District2',
+              state: 'State2',
+              country: 'FAR',
+            },
+          ],
+        },
+      })
       const result = transform(data, deathResolver, 'death')
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
@@ -428,6 +587,48 @@ Deno.test('FAR address tests - death events', async (t) => {
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
       assertEquals(declareAction?.declaration['spouse.addressSameAs'], 'NO')
+    }
+  )
+
+  await t.step(
+    'should omit spouse.addressSameAs when spouse details not available',
+    () => {
+      const data = buildDeathEventRegistration({
+        spouse: {
+          ...buildDeathEventRegistration().spouse!,
+          detailsExist: false,
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['spouse.addressSameAs'],
+        undefined
+      )
+      assertEquals(
+        declareAction?.declaration['spouse.detailsNotAvailable'],
+        true
+      )
+    }
+  )
+
+  await t.step(
+    'should omit spouse.addressSameAs when deceased is not married',
+    () => {
+      const data = buildDeathEventRegistration({
+        deceased: {
+          ...buildDeathEventRegistration().deceased!,
+          maritalStatus: 'WIDOWED',
+        },
+      })
+      const result = transform(data, deathResolver, 'death')
+      const declareAction = result.actions.find((a) => a.type === 'DECLARE')
+
+      assertEquals(
+        declareAction?.declaration['spouse.addressSameAs'],
+        undefined
+      )
     }
   )
 })

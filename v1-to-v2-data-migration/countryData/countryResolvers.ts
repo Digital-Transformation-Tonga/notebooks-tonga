@@ -4,7 +4,10 @@ import {
   getCustomField,
   getDocument,
   isFatherAddressSameAsMother,
+  isMotherAddressSameAsDeceased,
   shouldEmitFatherAddressSameAs,
+  shouldEmitMotherAddressSameAs,
+  shouldEmitSpouseDetailFields,
 } from '../helpers/resolverUtils.ts'
 import { EventRegistration } from '../helpers/types.ts'
 import { resolveAddress } from './addressResolver.ts'
@@ -245,7 +248,12 @@ export const deathCountryResolver = {
 
 
     'spouse.tongaPassId': (data: EventRegistration) =>
-        getCustomField(data,'death.spouse.spouse-view-group.spouseTonganDigitalId'),
+        shouldEmitSpouseDetailFields(data)
+            ? getCustomField(
+                  data,
+                  'death.spouse.spouse-view-group.spouseTonganDigitalId'
+              )
+            : undefined,
 
 
     'mother.name': (data: EventRegistration) =>
@@ -259,9 +267,15 @@ export const deathCountryResolver = {
     'mother.reason': (data: EventRegistration) => data.mother?.reasonNotApplying,
     'mother.dob': (data: EventRegistration) => data.mother?.birthDate,
     'mother.dobUnknown': (data: EventRegistration) =>data.mother?.exactDateOfBirthUnknown,
-    'mother.address': (data: EventRegistration) =>resolveAddress(data, data.mother?.address?.[0]),
-    // Legacy death form did not have mother.addressSameAs; default to "No" in v2.
-    'mother.addressSameAs': (_data: EventRegistration) => 'NO',
+    'mother.address': (data: EventRegistration) => {
+        if (data.mother?.detailsExist === false) return undefined
+        if (isMotherAddressSameAsDeceased(data)) return null
+        return resolveAddress(data, data.mother?.address?.[0])
+    },
+    'mother.addressSameAs': (data: EventRegistration) => {
+        if (!shouldEmitMotherAddressSameAs(data)) return undefined
+        return isMotherAddressSameAsDeceased(data) ? 'YES' : 'NO'
+    },
 
 
     'father.tongaPassId': (data: EventRegistration) =>
