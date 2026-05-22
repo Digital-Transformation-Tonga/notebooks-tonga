@@ -3,6 +3,15 @@ name: Migrate all records of an event from v1 to v2
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Environment to run migration in'
+        required: true
+        type: choice
+        default: 'development'
+        options:
+          - development
+          - qa
+          - datamigration
       event:
         description: 'The event to process (birth or death)'
         required: true
