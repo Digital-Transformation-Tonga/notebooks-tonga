@@ -29,7 +29,7 @@ on:
 jobs:
   migrate:
     name: Migrate ${{ github.event.inputs.event }} in ${{ github.event.inputs.environment }} (${{ github.event.inputs.domain }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, "${{ github.event.inputs.environment }}"]
     environment: ${{ github.event.inputs.environment }}
     outputs:
       script_output: ${{ steps.deno-script.outputs.script_output }}
