@@ -20,7 +20,7 @@ on:
         description: 'The environment domain (without protocol or subdomains)'
         required: true
         type: string
-        default: 'farajaland-qa.opencrvs.org'
+        default: 'dev.crvs.gov.to'
       client_id:
         description: 'System Client ID'
         required: false
@@ -45,10 +45,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-          curl -fsSL https://deno.land/install.sh | sh
-          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+          if ! command -v jq &> /dev/null; then
+            echo "jq not found. Installing..."
+            sudo apt-get update
+            sudo apt-get install -y jq
+          else
+            echo "jq is already installed."
+          fi
+
+          if ! command -v deno &> /dev/null; then
+            echo "deno not found. Installing..."
+            curl -fsSL https://deno.land/install.sh | sh
+            echo "$HOME/.deno/bin" >> $GITHUB_PATH
+          else
+            echo "deno is already installed."
+          fi
 
       - name: Convert notebook to TypeScript
         run: |
