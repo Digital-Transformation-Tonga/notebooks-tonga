@@ -69,6 +69,120 @@ Deno.test('transform - basic action type mappings', async (t) => {
   )
 
   await t.step(
+    'should use legacyRegistrationDate for REGISTER action createdAt',
+    () => {
+      const history = [
+        buildHistoryItem({
+          date: '2025-01-20T10:00:00.000Z',
+          regStatus: 'REGISTERED',
+        }),
+      ]
+      const registration = buildEventRegistration({
+        history,
+        registration: {
+          trackingId: 'TRACK123',
+          registrationNumber: 'REG123',
+        },
+      })
+      const resolver = {
+        'legacyInfo.legacyRegistrationDate': () => '1990-03-15',
+      }
+
+      const result = transform(registration, resolver, 'birth')
+
+      const createAction = result.actions.find((a) => a.type === 'CREATE')
+      const registerAction = result.actions.find(
+        (a) => a.type === 'REGISTER' && a.registrationNumber
+      )
+      assertEquals(
+        registerAction?.createdAt.startsWith('1990-03-15'),
+        true
+      )
+      assertEquals(
+        new Date(registerAction!.createdAt).valueOf() >
+          new Date(createAction!.createdAt).valueOf(),
+        true
+      )
+      assertEquals(result.createdAt.startsWith('1990-03-15'), true)
+    }
+  )
+
+  await t.step(
+    'should preserve action order when shifting legacyRegistrationDate',
+    () => {
+      const history = [
+        buildHistoryItem({
+          date: '2025-01-10T10:00:00.000Z',
+          regStatus: 'DECLARED',
+        }),
+        buildHistoryItem({
+          date: '2025-01-15T10:00:00.000Z',
+          regStatus: 'VALIDATED',
+        }),
+        buildHistoryItem({
+          date: '2025-01-20T10:00:00.000Z',
+          regStatus: 'REGISTERED',
+        }),
+      ]
+      const registration = buildEventRegistration({
+        history,
+        registration: {
+          trackingId: 'TRACK123',
+          registrationNumber: 'REG123',
+        },
+      })
+      const resolver = {
+        'legacyInfo.legacyRegistrationDate': () => '1990-03-15',
+      }
+
+      const result = transform(registration, resolver, 'birth')
+      const actionDates = result.actions.map((a) => ({
+        type: a.type,
+        createdAt: a.createdAt,
+      }))
+
+      for (let i = 1; i < actionDates.length; i++) {
+        assertEquals(
+          new Date(actionDates[i].createdAt).valueOf() >=
+            new Date(actionDates[i - 1].createdAt).valueOf(),
+          true
+        )
+      }
+
+      const registerAction = result.actions.find(
+        (a) => a.type === 'REGISTER' && a.registrationNumber
+      )
+      assertEquals(
+        registerAction?.createdAt.startsWith('1990-03-15'),
+        true
+      )
+    }
+  )
+
+  await t.step(
+    'should not shift timestamps when record is pending external validation',
+    () => {
+      const history = [
+        buildHistoryItem({
+          date: '2025-01-20T10:00:00.000Z',
+          regStatus: 'WAITING_VALIDATION',
+        }),
+      ]
+      const registration = buildEventRegistration({ history })
+      const resolver = {
+        'legacyInfo.legacyRegistrationDate': () => '1990-03-15',
+      }
+
+      const result = transform(registration, resolver, 'birth')
+
+      assertEquals(
+        result.createdAt,
+        new Date('2025-01-20T10:00:00.000Z').toISOString()
+      )
+    }
+  )
+
+  await t.step(
     'should map WAITING_VALIDATION regStatus to REGISTER action with Requested status',
     () => {
       const acceptedRegisterAction = buildHistoryItem({

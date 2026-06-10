@@ -418,6 +418,84 @@ const preProcessHistory = (eventRegistration: EventRegistration) => {
   return processedHistory
 }
 
+function toLegacyRegistrationIso(
+  declaration: Record<string, any>
+): string | undefined {
+  const legacyRegistrationDate = declaration['legacyInfo.legacyRegistrationDate']
+  if (!legacyRegistrationDate) {
+    return undefined
+  }
+  const normalized = normalizeDateString(String(legacyRegistrationDate))
+  if (!normalized) {
+    return undefined
+  }
+  return new Date(normalized).toISOString()
+}
+
+function ensureMonotonicActionTimestamps(
+  document: TransformedDocument
+): TransformedDocument {
+  for (let i = 1; i < document.actions.length; i++) {
+    const previous = new Date(document.actions[i - 1].createdAt).valueOf()
+    const current = new Date(document.actions[i].createdAt).valueOf()
+    if (current <= previous) {
+      document.actions[i].createdAt = new Date(previous + 1).toISOString()
+    }
+  }
+
+  if (document.actions.length > 0) {
+    document.createdAt = document.actions[0].createdAt
+  }
+
+  const lastAction = document.actions[document.actions.length - 1]
+  if (lastAction) {
+    document.updatedAt = lastAction.createdAt
+  }
+
+  return document
+}
+
+function applyLegacyRegistrationDate(
+  document: TransformedDocument,
+  declaration: Record<string, any>
+): TransformedDocument {
+  const registrationDate = toLegacyRegistrationIso(declaration)
+  if (!registrationDate) {
+    return document
+  }
+
+  const lastAction = document.actions[document.actions.length - 1]
+  if (lastAction?.type === 'REGISTER' && lastAction.status === 'Requested') {
+    return document
+  }
+
+  const registerAction = document.actions.find(
+    (action) => action.type === 'REGISTER' && action.registrationNumber
+  )
+  if (!registerAction) {
+    return document
+  }
+
+  const deltaMs =
+    new Date(registrationDate).valueOf() -
+    new Date(registerAction.createdAt).valueOf()
+  if (deltaMs === 0) {
+    return ensureMonotonicActionTimestamps(document)
+  }
+
+  const shiftTimestamp = (timestamp: string) =>
+    new Date(new Date(timestamp).valueOf() + deltaMs).toISOString()
+
+  document.createdAt = shiftTimestamp(document.createdAt)
+  document.updatedAt = shiftTimestamp(document.updatedAt)
+
+  for (const action of document.actions) {
+    action.createdAt = shiftTimestamp(action.createdAt)
+  }
+
+  return ensureMonotonicActionTimestamps(document)
+}
+
 export function transform(
   eventRegistration: EventRegistration,
   resolver: ResolverMap,
@@ -440,18 +518,19 @@ export function transform(
     .filter((x) => x.action || x.regStatus !== 'CERTIFIED') // We're dropping certified in favour of issued
 
   const newest = historyAsc[historyAsc.length - 1]
+  const createdAt = new Date(historyAsc[0].date).toISOString()
 
   const documents: TransformedDocument = {
     id: eventRegistration.id,
     type: eventType,
-    createdAt: new Date(historyAsc[0].date).toISOString(),
+    createdAt,
     updatedAt: new Date(newest.date).toISOString(),
     updatedAtLocation: newest.office?.id || '',
     trackingId: eventRegistration.registration.trackingId,
     actions: [
       {
         type: 'CREATE' as ActionType,
-        createdAt: new Date(historyAsc[0].date).toISOString(),
+        createdAt,
         createdBy: historyAsc[0].user?.id || '',
         createdByUserType: 'user' as const,
         createdByRole: historyAsc[0].user?.role?.id || '',
@@ -486,7 +565,10 @@ export function transform(
     ],
   }
 
-  return postProcess(documents, declaration)
+  return applyLegacyRegistrationDate(
+    postProcess(documents, declaration),
+    declaration
+  )
 }
 
 /**
