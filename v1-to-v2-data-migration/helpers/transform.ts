@@ -6,7 +6,11 @@ import {
   AGE_MAPPINGS,
   VERIFIED_MAPPINGS,
 } from './defaultMappings.ts'
-import { normalizeDateString, isDateField } from './dateUtils.ts'
+import {
+  normalizeDateString,
+  isDateField,
+  normalizeDeclarationDates,
+} from './dateUtils.ts'
 import { COUNTRY_FIELD_MAPPINGS } from '../countryData/countryMappings.ts'
 import { NAME_MAPPINGS } from '../countryData/nameMappings.ts'
 import { ADDRESS_MAPPINGS } from '../countryData/addressMappings.ts'
@@ -48,7 +52,10 @@ function patternMatch(
       if (Object.keys(documentsResolver).includes(valueKey)) {
         continue
       }
-      transformedData[valueKey] = value
+      transformedData[valueKey] =
+        typeof value === 'string' && isDateField(valueKey)
+          ? normalizeDateString(value)
+          : value
     } else if (NAME_MAPPINGS[key]) {
       const nameMapping = NAME_MAPPINGS[key](value as string)
       const nameKey = Object.keys(nameMapping)[0]
@@ -108,12 +115,15 @@ function patternMatch(
       )
       if (mapKey) {
         const valueKey = mappings[mapKey as keyof typeof mappings]
-        transformedData[valueKey] = value
+        transformedData[valueKey] =
+          typeof value === 'string' && isDateField(valueKey)
+            ? normalizeDateString(value)
+            : value
       }
     }
   }
 
-  return transformedData
+  return normalizeDeclarationDates(transformedData)
 }
 
 export function transformCorrection(
@@ -123,7 +133,10 @@ export function transformCorrection(
 ): Record<string, any> {
   const v1InputDeclaration =
     historyItem.input?.reduce((acc: Record<string, any>, curr: any) => {
-      acc[`${event}.${curr.valueCode}.${curr.valueId}`] = curr.value
+      const value = isDateField(curr.valueId)
+        ? normalizeDateString(curr.value)
+        : curr.value
+      acc[`${event}.${curr.valueCode}.${curr.valueId}`] = value
       return acc
     }, {}) || {}
 
@@ -502,13 +515,17 @@ export function transform(
   eventType: 'birth' | 'death'
 ): TransformedDocument {
   const result = Object.entries(resolver).map(([fieldId, r]) => {
-    return [fieldId, r(eventRegistration, eventType)]
+    let value = r(eventRegistration, eventType)
+    if (isDateField(fieldId) && typeof value === 'string') {
+      value = normalizeDateString(value)
+    }
+    return [fieldId, value]
   })
 
   const withOutNulls = result.filter(
     ([_, value]) => value !== null && value !== undefined
   )
-  const declaration = Object.fromEntries(withOutNulls)
+  const declaration = normalizeDeclarationDates(Object.fromEntries(withOutNulls))
 
   const processedHistory = preProcessHistory(eventRegistration)
 
@@ -674,7 +691,15 @@ function postProcess(
     rev = rev.filter((action) => !actionsToRemove.includes(action.id))
   }
 
-  document.actions = rev.reverse()
+  document.actions = rev.reverse().map((action) => ({
+    ...action,
+    declaration: action.declaration
+      ? normalizeDeclarationDates(action.declaration)
+      : action.declaration,
+    annotation: action.annotation
+      ? normalizeDeclarationDates(action.annotation)
+      : action.annotation,
+  }))
 
   return document
 }

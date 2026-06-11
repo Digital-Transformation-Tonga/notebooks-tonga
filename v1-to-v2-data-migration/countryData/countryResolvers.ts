@@ -2,6 +2,7 @@ import {
   coerceLegacyBoolean,
   coerceLegacyOptionalInt,
   getCustomField,
+  getCustomDateField,
   getDocument,
   isFatherAddressSameAsMother,
   isMotherAddressSameAsDeceased,
@@ -54,7 +55,7 @@ export const countryResolver = {
     'child.grantingOfficialId': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.grantingOfficialId'),
     'child.grantDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.child.child-view-group.grantDate'),
+        getCustomDateField(data, 'birth.child.child-view-group.grantDate'),
     'child.birthNote': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.birthDocumentNote'),
 
@@ -87,7 +88,7 @@ export const countryResolver = {
     'foreignRegistration.foreignRegistrationPlace': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.foreignRegistrationPlace'),
     'foreignRegistration.foreignRegistrationDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.child.child-view-group.foreignRegistrationDate'),
+        getCustomDateField(data, 'birth.child.child-view-group.foreignRegistrationDate'),
     'foreignRegistration.foreignBirthNote': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.birthnotebirthnote'),
     'foreignRegistration.foreignRegistrant': (data: EventRegistration) =>
@@ -103,13 +104,13 @@ export const countryResolver = {
     'legacyInfo.legacyBirthPlace': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyBirthPlace'),
     'legacyInfo.legacyRegistrationDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyRegistrationDate'),
+        getCustomDateField(data, 'birth.dataMigration.dataMigration-view-group.legacyRegistrationDate'),
     'legacyInfo.akaFirstName': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.akaFirstName'),
     'legacyInfo.akaLastName': (data: EventRegistration) =>
         getCustomField(data, 'birth.child.child-view-group.akaLastName'),
     'legacyInfo.fatherMarriageDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.father.father-view-group.marriageDate'),
+        getCustomDateField(data, 'birth.father.father-view-group.marriageDate'),
     'legacyInfo.fatherMarriagePlace': (data: EventRegistration) =>
         getCustomField(data, 'birth.father.father-view-group.marriagePlace'),
     'legacyInfo.fatherAge': (data: EventRegistration) =>
@@ -117,7 +118,7 @@ export const countryResolver = {
             getCustomField(data, 'birth.father.father-view-group.fatherAge')
         ),
     'legacyInfo.motherMarriageDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.mother.mother-view-group.marriageDate'),
+        getCustomDateField(data, 'birth.mother.mother-view-group.marriageDate'),
     'legacyInfo.motherMarriagePlace': (data: EventRegistration) =>
         getCustomField(data, 'birth.mother.mother-view-group.marriagePlace'),
     'legacyInfo.motherAge': (data: EventRegistration) =>
@@ -137,7 +138,7 @@ export const countryResolver = {
     'legacyInfo.legacyEnteredById': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyEnteredById'),
     'legacyInfo.legacyCreatedDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyCreatedDate'),
+        getCustomDateField(data, 'birth.dataMigration.dataMigration-view-group.legacyCreatedDate'),
     'legacyInfo.legacyEventIndex': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyEventIndex'),
     'legacyInfo.legacyDraftId': (data: EventRegistration) =>
@@ -147,7 +148,7 @@ export const countryResolver = {
     'legacyInfo.legacyRecordTypeDescription': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyRecordTypeDescription'),
     'legacyInfo.legacyAmendedDate': (data: EventRegistration) =>
-        getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyAmendedDate'),
+        getCustomDateField(data, 'birth.dataMigration.dataMigration-view-group.legacyAmendedDate'),
     'legacyInfo.legacyAmendedBy': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyAmendedBy'),
     'legacyInfo.legacyRecordTypeName': (data: EventRegistration) =>
@@ -209,7 +210,7 @@ export const deathCountryResolver = {
     'deceased.grantingOfficialId': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.grantingOfficialId'),
     'deceased.grantDate': (data: EventRegistration) =>
-        getCustomField(data, 'death.deceased.deceased-view-group.grantDate'),
+        getCustomDateField(data, 'death.deceased.deceased-view-group.grantDate'),
     'deceased.grantNote': (data: EventRegistration) =>
         getCustomField(data,'death.deceased.deceased-view-group.deathDocumentNote'),
 
@@ -219,7 +220,7 @@ export const deathCountryResolver = {
     'foreignRegistration.foreignRegistrationPlace': (data: EventRegistration) =>
         getCustomField(data,'death.registrationInfo.registrationInfo-view-group.registrationInfoForeignRegistrationPlace'),
     'foreignRegistration.foreignRegistrationDate': (data: EventRegistration) =>
-        getCustomField(data,'death.registrationInfo.registrationInfo-view-group.registrationInfoDate'),
+        getCustomDateField(data,'death.registrationInfo.registrationInfo-view-group.registrationInfoDate'),
     'foreignRegistration.foreignDeathNote': (data: EventRegistration) =>
         getCustomField(data,'death.registrationInfo.registrationInfo-view-group.registrationInfoForeignDeathNote'),
     'foreignRegistration.foreignRegistrant': (data: EventRegistration) =>
@@ -333,9 +334,9 @@ export const deathCountryResolver = {
     'legacyInfo.isMigrated': (data: EventRegistration) =>
         getCustomField(data,'death.dataMigration.dataMigration-view-group.migrated'),
     'legacyInfo.legacyCreatedDate': (data: EventRegistration) =>
-        getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyCreatedDate'),
+        getCustomDateField(data,'death.dataMigration.dataMigration-view-group.legacyCreatedDate'),
     'legacyInfo.legacyRegistrationDate': (data: EventRegistration) =>
-        getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyRegistrationDate'),
+        getCustomDateField(data,'death.dataMigration.dataMigration-view-group.legacyRegistrationDate'),
     'legacyInfo.legacyEventIndex': (data: EventRegistration) =>
         getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyEventIndex'),
     'legacyInfo.legacyRecordStatus': (data: EventRegistration) =>
@@ -351,7 +352,7 @@ export const deathCountryResolver = {
     'legacyInfo.legacyAmendedBy': (data: EventRegistration) =>
         getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyAmendedBy'),
     'legacyInfo.legacyAmendedDate': (data: EventRegistration) =>
-        getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyAmendedDate'),
+        getCustomDateField(data,'death.dataMigration.dataMigration-view-group.legacyAmendedDate'),
     'legacyInfo.legacyRecordTypeName': (data: EventRegistration) =>
         getCustomField(data,'death.dataMigration.dataMigration-view-group.legacyRecordTypeName'),
     'legacyInfo.legacyRecordTypeDescription': (data: EventRegistration) =>

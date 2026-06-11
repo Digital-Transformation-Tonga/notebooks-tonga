@@ -1,4 +1,5 @@
 import { resolveAddress } from '../countryData/addressResolver.ts'
+import { normalizeDateString } from './dateUtils.ts'
 import {
   birthSpecialInformants,
   deathSpecialInformants,
@@ -61,6 +62,14 @@ export function getCustomField(data: any, id: string): any {
   return data?.questionnaire?.find(
     ({ fieldId }: { fieldId: string }) => fieldId === id
   )?.value
+}
+
+export function getCustomDateField(data: any, id: string): string | undefined {
+  const value = getCustomField(data, id)
+  if (value === null || value === undefined || value === '') {
+    return undefined
+  }
+  return normalizeDateString(String(value))
 }
 
 /** V1 questionnaire values are often the strings "true"/"false"; v2 expects booleans. */
