@@ -38,6 +38,7 @@ export const extractFormFields = (
     .flatMap((x) => x)
 
 type FailedRecord = {
+  recordNumber: number
   entryId: string
   trackingId: string
   error: string
@@ -53,6 +54,9 @@ export const migrationProgress = {
   recordImported(count: number) {
     this.importedCount += count
   },
+  getNextRecordNumber() {
+    return this.importedCount + this.failedRecords.length + 1
+  },
   recordFailure(
     entryId: string,
     trackingId: string | undefined,
@@ -60,15 +64,17 @@ export const migrationProgress = {
     options?: { wasImported?: boolean }
   ) {
     const reason = error.trim() || 'Unknown error'
+    const recordNumber = this.getNextRecordNumber()
 
     this.failedRecords.push({
+      recordNumber,
       entryId,
       trackingId: trackingId ?? 'unknown',
       error: reason,
     })
 
     console.error(
-      `SKIPPED RECORD: entryId=${entryId}, trackingId=${trackingId ?? 'unknown'}, reason=${reason}`
+      `SKIPPED RECORD #${recordNumber}: entryId=${entryId}, trackingId=${trackingId ?? 'unknown'}, reason=${reason}`
     )
 
     if (options?.wasImported) {
@@ -76,7 +82,7 @@ export const migrationProgress = {
     }
   },
   logResumeHint() {
-    const errorRecordCount = this.importedCount + 1
+    const errorRecordCount = this.getNextRecordNumber()
     console.error(`ERROR RECORD COUNT: ${errorRecordCount}`)
     console.error(
       `Resume with skip: ${errorRecordCount} to start from record ${errorRecordCount + 1}`
@@ -92,7 +98,7 @@ export const migrationProgress = {
       console.error('Failed records:')
       for (const record of this.failedRecords) {
         console.error(
-          `  entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
+          `  #${record.recordNumber}: entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
         )
       }
     }
@@ -241,9 +247,6 @@ export const bulkImportIsolatingFailures = async (
     }
 
     const mid = Math.floor(items.length / 2)
-    console.error(
-      `Bulk import failed for ${items.length} records (${context.entryIds[0]}..${context.entryIds[items.length - 1]}), splitting batch to isolate failure...`
-    )
 
     const leftResult = await bulkImportIsolatingFailures(
       items.slice(0, mid),
