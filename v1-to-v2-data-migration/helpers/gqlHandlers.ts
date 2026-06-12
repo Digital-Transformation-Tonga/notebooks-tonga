@@ -29,6 +29,43 @@ const formatImportContext = (context?: ImportContext) => {
   return parts.join(', ') || 'none'
 }
 
+const formatImportErrorMessage = (
+  response: Response,
+  errorBody: unknown,
+  context?: ImportContext
+) => {
+  const body = errorBody as Record<string, any>
+  const apiMessage =
+    body?.error?.json?.message ||
+    body?.error?.message ||
+    body?.message ||
+    (typeof body?.raw === 'string' ? body.raw : undefined)
+
+  const parts = [`${response.status} ${response.statusText}`]
+
+  if (apiMessage) {
+    parts.push(String(apiMessage))
+  }
+
+  const apiCode =
+    body?.error?.json?.data?.code ||
+    body?.error?.json?.code ||
+    body?.error?.code
+
+  if (apiCode) {
+    parts.push(String(apiCode))
+  }
+
+  if (context?.entryIds?.length === 1) {
+    parts.push(`entryId=${context.entryIds[0]}`)
+    if (context.trackingIds?.[0]) {
+      parts.push(`trackingId=${context.trackingIds[0]}`)
+    }
+  }
+
+  return `Event creation failed: ${parts.join(' | ')}`
+}
+
 const logImportFailure = (
   label: string,
   response: Response,
@@ -74,9 +111,7 @@ export const declareEvent = async (
     const errorBody = await readResponseBody(response)
     logImportFailure('DECLARE', response, errorBody, context, body.length)
 
-    throw new Error(
-      `Event creation failed: ${response.status} ${response.statusText} (${formatImportContext(context)})`
-    )
+    throw new Error(formatImportErrorMessage(response, errorBody, context))
   }
   return response.json()
 }
@@ -108,9 +143,7 @@ export const bulkImport = async (
     const errorBody = await readResponseBody(response)
     logImportFailure('BULK IMPORT', response, errorBody, context, body.length)
 
-    throw new Error(
-      `Event creation failed: ${response.status} ${response.statusText} (${formatImportContext(context)})`
-    )
+    throw new Error(formatImportErrorMessage(response, errorBody, context))
   }
   return response.json()
 }
