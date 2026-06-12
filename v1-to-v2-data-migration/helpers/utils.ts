@@ -37,6 +37,34 @@ export const extractFormFields = (
     )
     .flatMap((x) => x)
 
+export const migrationProgress = {
+  importedCount: 0,
+  reset(skip: number) {
+    this.importedCount = skip
+  },
+  recordImported(count: number) {
+    this.importedCount += count
+  },
+  logResumeHint() {
+    const errorRecordCount = this.importedCount + 1
+    console.error(`ERROR RECORD COUNT: ${errorRecordCount}`)
+    console.error(
+      `Resume with skip: ${errorRecordCount} to start from record ${errorRecordCount + 1}`
+    )
+  },
+}
+
+export const getPaginationSkip = (recordSkip: number, pageSize: number) => {
+  const startPage = Math.floor(recordSkip / pageSize) + 1
+  const skipWithinPage = recordSkip % pageSize
+
+  return {
+    startPage,
+    skipWithinPage,
+    totalProcessed: recordSkip,
+  }
+}
+
 export function batch<T>(items: T[], batchSize: number): T[][] {
   if (batchSize <= 0) {
     throw new Error('batchSize must be greater than 0')
@@ -94,11 +122,13 @@ export const bulkImportIsolatingFailures = async (
   const context = toImportContext(items)
 
   try {
-    return await importFn(
+    const result = await importFn(
       items.map((item) => item.document),
       token,
       context
     )
+    migrationProgress.recordImported(items.length)
+    return result
   } catch (err) {
     if (items.length <= 1) {
       const item = items[0]
