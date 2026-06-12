@@ -29,6 +29,11 @@ on:
         description: 'System Client Secret'
         required: false
         type: string
+      skip:
+        description: 'Number of records to skip'
+        required: false
+        type: number
+        default: 0
 
 jobs:
   fetch-and-transform:
@@ -71,6 +76,7 @@ jobs:
         env:
           OPENCRVS_EVENT: ${{ github.event.inputs.event }}
           OPENCRVS_DOMAIN: ${{ github.event.inputs.domain }}
+          RECORD_SKIP: ${{ github.event.inputs.skip }}
           OPENCRVS_CLIENT_ID: ${{ github.event.inputs.client_id }}
           OPENCRVS_CLIENT_SECRET: ${{ github.event.inputs.client_secret }}
         run: |
