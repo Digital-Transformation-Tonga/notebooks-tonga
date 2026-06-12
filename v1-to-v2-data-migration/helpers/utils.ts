@@ -37,6 +37,79 @@ export const extractFormFields = (
     )
     .flatMap((x) => x)
 
+type FailedRecord = {
+  entryId: string
+  trackingId: string
+  error: string
+}
+
+export const migrationProgress = {
+  importedCount: 0,
+  failedRecords: [] as FailedRecord[],
+  reset(skip: number) {
+    this.importedCount = skip
+    this.failedRecords = []
+  },
+  recordImported(count: number) {
+    this.importedCount += count
+  },
+  recordFailure(
+    entryId: string,
+    trackingId: string | undefined,
+    error: string,
+    options?: { wasImported?: boolean }
+  ) {
+    const reason = error.trim() || 'Unknown error'
+
+    this.failedRecords.push({
+      entryId,
+      trackingId: trackingId ?? 'unknown',
+      error: reason,
+    })
+
+    console.error(
+      `SKIPPED RECORD: entryId=${entryId}, trackingId=${trackingId ?? 'unknown'}, reason=${reason}`
+    )
+
+    if (options?.wasImported) {
+      this.importedCount = Math.max(0, this.importedCount - 1)
+    }
+  },
+  logResumeHint() {
+    const errorRecordCount = this.importedCount + 1
+    console.error(`ERROR RECORD COUNT: ${errorRecordCount}`)
+    console.error(
+      `Resume with skip: ${errorRecordCount} to start from record ${errorRecordCount + 1}`
+    )
+  },
+  logSummary(eventLabel: string) {
+    console.log('')
+    console.log(`MIGRATION COMPLETE: ${eventLabel}`)
+    console.log(`Imported: ${this.importedCount}`)
+    console.log(`Failed: ${this.failedRecords.length}`)
+
+    if (this.failedRecords.length > 0) {
+      console.error('Failed records:')
+      for (const record of this.failedRecords) {
+        console.error(
+          `  entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
+        )
+      }
+    }
+  },
+}
+
+export const getPaginationSkip = (recordSkip: number, pageSize: number) => {
+  const startPage = Math.floor(recordSkip / pageSize) + 1
+  const skipWithinPage = recordSkip % pageSize
+
+  return {
+    startPage,
+    skipWithinPage,
+    totalProcessed: recordSkip,
+  }
+}
+
 export function batch<T>(items: T[], batchSize: number): T[][] {
   if (batchSize <= 0) {
     throw new Error('batchSize must be greater than 0')
@@ -60,6 +133,39 @@ type IndexResult = {
   }
 }
 
+type ImportItem = {
+  entryId: string
+  document: Record<string, unknown>
+}
+
+export const formatErrorMessage = (err: unknown): string => {
+  if (err instanceof Error) {
+    return err.message
+  }
+
+  if (typeof err === 'string') {
+    return err
+  }
+
+  try {
+    return JSON.stringify(err)
+  } catch {
+    return String(err)
+  }
+}
+
+const formatIndexError = (error: Record<string, unknown>) => {
+  return [
+    error.reason,
+    error.message,
+    error.type,
+    error.code,
+  ]
+    .filter((value) => value !== undefined && value !== null && value !== '')
+    .map(String)
+    .join(' | ') || 'Index error'
+}
+
 export const getIndexErrors = (
   indexResult: IndexResult
 ): string[] | undefined => {
@@ -70,9 +176,31 @@ export const getIndexErrors = (
   }
 }
 
-type ImportItem = {
-  entryId: string
-  document: Record<string, unknown>
+export const recordIndexErrors = (
+  indexResult: IndexResult | undefined,
+  items: ImportItem[]
+) => {
+  if (!indexResult?.result?.data?.json?.errors) {
+    return
+  }
+
+  const resultItems = indexResult.result.data.json.items ?? []
+
+  for (let i = 0; i < resultItems.length; i++) {
+    const resultItem = resultItems[i]
+    if (!resultItem.index?.error) {
+      continue
+    }
+
+    const item = items[i]
+    const reason = formatIndexError(resultItem.index.error ?? {})
+    migrationProgress.recordFailure(
+      item?.entryId ?? 'unknown',
+      String(item?.document?.trackingId ?? ''),
+      reason,
+      { wasImported: true }
+    )
+  }
 }
 
 type ImportFn = (
@@ -94,18 +222,22 @@ export const bulkImportIsolatingFailures = async (
   const context = toImportContext(items)
 
   try {
-    return await importFn(
+    const result = await importFn(
       items.map((item) => item.document),
       token,
       context
     )
+    migrationProgress.recordImported(items.length)
+    return result
   } catch (err) {
     if (items.length <= 1) {
       const item = items[0]
-      console.error(
-        `ISOLATED FAILING RECORD: entryId=${item?.entryId}, trackingId=${item?.document?.trackingId}`
+      migrationProgress.recordFailure(
+        item?.entryId ?? 'unknown',
+        String(item?.document?.trackingId ?? ''),
+        formatErrorMessage(err)
       )
-      throw err
+      return undefined
     }
 
     const mid = Math.floor(items.length / 2)

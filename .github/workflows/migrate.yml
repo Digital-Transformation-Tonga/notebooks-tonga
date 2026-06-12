@@ -30,7 +30,7 @@ on:
         required: false
         type: string
       skip:
-        description: 'Number of records to skip'
+        description: 'Skip count from failed run (use "Resume with skip" value to start after the error record)'
         required: false
         type: number
         default: 0
