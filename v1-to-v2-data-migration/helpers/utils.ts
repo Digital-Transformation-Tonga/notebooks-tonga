@@ -69,3 +69,60 @@ export const getIndexErrors = (
       .map((x: { index: { error: { reason: any } } }) => x.index.error.reason)
   }
 }
+
+type ImportItem = {
+  entryId: string
+  document: Record<string, unknown>
+}
+
+type ImportFn = (
+  documents: Record<string, unknown>[],
+  token: string,
+  context?: { entryIds?: string[]; trackingIds?: string[] }
+) => Promise<unknown>
+
+const toImportContext = (items: ImportItem[]) => ({
+  entryIds: items.map((item) => item.entryId),
+  trackingIds: items.map((item) => String(item.document.trackingId ?? '')),
+})
+
+export const bulkImportIsolatingFailures = async (
+  items: ImportItem[],
+  token: string,
+  importFn: ImportFn
+): Promise<unknown> => {
+  const context = toImportContext(items)
+
+  try {
+    return await importFn(
+      items.map((item) => item.document),
+      token,
+      context
+    )
+  } catch (err) {
+    if (items.length <= 1) {
+      const item = items[0]
+      console.error(
+        `ISOLATED FAILING RECORD: entryId=${item?.entryId}, trackingId=${item?.document?.trackingId}`
+      )
+      throw err
+    }
+
+    const mid = Math.floor(items.length / 2)
+    console.error(
+      `Bulk import failed for ${items.length} records (${context.entryIds[0]}..${context.entryIds[items.length - 1]}), splitting batch to isolate failure...`
+    )
+
+    const leftResult = await bulkImportIsolatingFailures(
+      items.slice(0, mid),
+      token,
+      importFn
+    )
+    const rightResult = await bulkImportIsolatingFailures(
+      items.slice(mid),
+      token,
+      importFn
+    )
+    return rightResult ?? leftResult
+  }
+}

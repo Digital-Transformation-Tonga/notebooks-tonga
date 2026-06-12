@@ -1,53 +1,116 @@
 import { API, GATEWAY } from './routes.ts'
 
-export const declareEvent = async (document: any, token: string) => {
+export type ImportContext = {
+  entryIds?: string[]
+  trackingIds?: string[]
+}
+
+const readResponseBody = async (response: Response) => {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { raw: text }
+  }
+}
+
+const formatImportContext = (context?: ImportContext) => {
+  if (!context) {
+    return 'none'
+  }
+
+  const parts: string[] = []
+  if (context.entryIds?.length) {
+    parts.push(`entryIds=[${context.entryIds.join(', ')}]`)
+  }
+  if (context.trackingIds?.length) {
+    parts.push(`trackingIds=[${context.trackingIds.join(', ')}]`)
+  }
+  return parts.join(', ') || 'none'
+}
+
+const logImportFailure = (
+  label: string,
+  response: Response,
+  errorBody: unknown,
+  context?: ImportContext,
+  payloadSizeBytes?: number
+) => {
+  console.error(`${label} ERROR`)
+  console.error(`Status: ${response.status} ${response.statusText}`)
+  if (payloadSizeBytes !== undefined) {
+    console.error(
+      `Payload size: ${(payloadSizeBytes / 1024 / 1024).toFixed(2)} MB`
+    )
+  }
+  console.error(`Context: ${formatImportContext(context)}`)
+  console.error('Response body:', JSON.stringify(errorBody, null, 2))
+}
+
+export const declareEvent = async (
+  document: any,
+  token: string,
+  context?: ImportContext
+) => {
+  const body = JSON.stringify({
+    json: document,
+    meta: {
+      values: {
+        declaration: ['undefined'],
+      },
+    },
+  })
+
   const response = await fetch(`${GATEWAY}/events/event.import`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      json: document,
-      meta: {
-        values: {
-          declaration: ['undefined'],
-        },
-      },
-    }),
+    body,
   })
 
   if (!response.ok) {
-    console.log('DECLARE ERROR!')
-    console.log((await response.json()).error)
+    const errorBody = await readResponseBody(response)
+    logImportFailure('DECLARE', response, errorBody, context, body.length)
 
-    throw new Error(`Event creation failed: ${response.statusText}`)
+    throw new Error(
+      `Event creation failed: ${response.status} ${response.statusText} (${formatImportContext(context)})`
+    )
   }
   return response.json()
 }
 
-export const bulkImport = async (documents: any[], token: string) => {
+export const bulkImport = async (
+  documents: any[],
+  token: string,
+  context?: ImportContext
+) => {
+  const body = JSON.stringify({
+    json: documents,
+    meta: {
+      values: {
+        declaration: ['undefined'],
+      },
+    },
+  })
+
   const response = await fetch(`${GATEWAY}/events/event.bulkImport`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      json: documents,
-      meta: {
-        values: {
-          declaration: ['undefined'],
-        },
-      },
-    }),
+    body,
   })
 
   if (!response.ok) {
-    console.log('DECLARE ERROR!')
-    console.log((await response.json()).error)
+    const errorBody = await readResponseBody(response)
+    logImportFailure('BULK IMPORT', response, errorBody, context, body.length)
 
-    throw new Error(`Event creation failed: ${response.statusText}`)
+    throw new Error(
+      `Event creation failed: ${response.status} ${response.statusText} (${formatImportContext(context)})`
+    )
   }
   return response.json()
 }
