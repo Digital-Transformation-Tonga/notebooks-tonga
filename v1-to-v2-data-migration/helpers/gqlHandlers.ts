@@ -56,13 +56,6 @@ const formatImportErrorMessage = (
     parts.push(String(apiCode))
   }
 
-  if (context?.entryIds?.length === 1) {
-    parts.push(`entryId=${context.entryIds[0]}`)
-    if (context.trackingIds?.[0]) {
-      parts.push(`trackingId=${context.trackingIds[0]}`)
-    }
-  }
-
   return `Event creation failed: ${parts.join(' | ')}`
 }
 
@@ -109,7 +102,9 @@ export const declareEvent = async (
 
   if (!response.ok) {
     const errorBody = await readResponseBody(response)
-    logImportFailure('DECLARE', response, errorBody, context, body.length)
+    if (context?.entryIds?.length === 1) {
+      logImportFailure('DECLARE', response, errorBody, context, body.length)
+    }
 
     throw new Error(formatImportErrorMessage(response, errorBody, context))
   }
@@ -141,7 +136,9 @@ export const bulkImport = async (
 
   if (!response.ok) {
     const errorBody = await readResponseBody(response)
-    logImportFailure('BULK IMPORT', response, errorBody, context, body.length)
+    if (context?.entryIds?.length === 1) {
+      logImportFailure('BULK IMPORT', response, errorBody, context, body.length)
+    }
 
     throw new Error(formatImportErrorMessage(response, errorBody, context))
   }
