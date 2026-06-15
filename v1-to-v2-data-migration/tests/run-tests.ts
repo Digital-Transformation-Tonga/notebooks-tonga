@@ -34,6 +34,8 @@ async function runTests() {
       '--allow-read',
       '--allow-env',
       '--allow-net',
+      '--allow-write',
+      '--allow-ffi',
       '--allow-sys',
     ],
     cwd: TESTS_DIR,

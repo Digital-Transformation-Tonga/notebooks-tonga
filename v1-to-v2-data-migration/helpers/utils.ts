@@ -1,4 +1,15 @@
 import { FormCollection, FormFieldWithId } from './types.ts'
+import {
+  captureDocumentSequenceBaselines,
+  commitRegistrationNumbersFromDocuments,
+  isSequenceStoreConfigured,
+  logRegistrationNumberChange,
+  prepareDocumentsForImport,
+  resetRegistrationNumberSession,
+  restoreSequenceBaselines,
+  tryAssignNewRegistrationNumber,
+} from './registrationSequence.ts'
+import { REGISTRATION_NUMBER_RETRY_LIMIT } from './vars.ts'
 
 export const extractFieldType = (obj: any, fieldName: string): unknown[] => {
   const fields: unknown[] = []
@@ -50,6 +61,7 @@ export const migrationProgress = {
   reset(skip: number) {
     this.importedCount = skip
     this.failedRecords = []
+    resetRegistrationNumberSession()
   },
   recordImported(count: number) {
     this.importedCount += count
@@ -220,32 +232,119 @@ const toImportContext = (items: ImportItem[]) => ({
   trackingIds: items.map((item) => String(item.document.trackingId ?? '')),
 })
 
+const isRetryableImportError = (err: unknown) => {
+  const message = formatErrorMessage(err)
+  return (
+    message.includes('500') ||
+    message.includes('INTERNAL_SERVER_ERROR') ||
+    message.includes('duplicate') ||
+    message.includes('unique constraint')
+  )
+}
+
+const importSingleItem = async (
+  item: ImportItem,
+  token: string,
+  importFn: ImportFn
+) => {
+  const context = toImportContext([item])
+  const result = await importFn([item.document], token, context)
+  commitRegistrationNumbersFromDocuments([item.document])
+  return result
+}
+
+const processSingleRecordImport = async (
+  item: ImportItem,
+  token: string,
+  importFn: ImportFn
+): Promise<{ success: true; result: unknown } | { success: false; error: unknown }> => {
+  const baselines = captureDocumentSequenceBaselines(item.document)
+  const trackingId = String(item.document.trackingId ?? 'unknown')
+
+  prepareDocumentsForImport([item.document])
+
+  try {
+    const result = await importSingleItem(item, token, importFn)
+    return { success: true, result }
+  } catch (initialError) {
+    if (!isSequenceStoreConfigured() || !isRetryableImportError(initialError)) {
+      restoreSequenceBaselines(baselines)
+      return { success: false, error: initialError }
+    }
+
+    for (let attempt = 1; attempt <= REGISTRATION_NUMBER_RETRY_LIMIT; attempt++) {
+      const change = tryAssignNewRegistrationNumber(item.document)
+      if (!change) {
+        restoreSequenceBaselines(baselines)
+        return { success: false, error: initialError }
+      }
+
+      logRegistrationNumberChange(
+        trackingId,
+        change.previous,
+        change.next,
+        attempt,
+        'retry'
+      )
+
+      try {
+        const result = await importSingleItem(item, token, importFn)
+        console.warn(
+          `Registration number retry succeeded for trackingId=${trackingId} ` +
+            `using ${change.next}`
+        )
+        return { success: true, result }
+      } catch (retryError) {
+        if (attempt === REGISTRATION_NUMBER_RETRY_LIMIT) {
+          console.error(
+            `Registration number retries exhausted for trackingId=${trackingId}: ` +
+              formatErrorMessage(retryError)
+          )
+        }
+      }
+    }
+
+    restoreSequenceBaselines(baselines)
+    console.warn(
+      `Restored sequence baseline for trackingId=${trackingId} ` +
+        'after failed import (sequence was not consumed)'
+    )
+    return { success: false, error: initialError }
+  }
+}
+
 export const bulkImportIsolatingFailures = async (
   items: ImportItem[],
   token: string,
   importFn: ImportFn
 ): Promise<unknown> => {
+  if (items.length <= 1) {
+    const item = items[0]
+    const outcome = await processSingleRecordImport(item, token, importFn)
+
+    if (outcome.success) {
+      migrationProgress.recordImported(1)
+      return outcome.result
+    }
+
+    migrationProgress.recordFailure(
+      item?.entryId ?? 'unknown',
+      String(item?.document?.trackingId ?? ''),
+      formatErrorMessage(outcome.error)
+    )
+    return undefined
+  }
+
+  const documents = items.map((item) => item.document)
+  prepareDocumentsForImport(documents)
   const context = toImportContext(items)
 
   try {
-    const result = await importFn(
-      items.map((item) => item.document),
-      token,
-      context
-    )
+    const result = await importFn(documents, token, context)
+    commitRegistrationNumbersFromDocuments(documents)
     migrationProgress.recordImported(items.length)
     return result
   } catch (err) {
-    if (items.length <= 1) {
-      const item = items[0]
-      migrationProgress.recordFailure(
-        item?.entryId ?? 'unknown',
-        String(item?.document?.trackingId ?? ''),
-        formatErrorMessage(err)
-      )
-      return undefined
-    }
-
     const mid = Math.floor(items.length / 2)
 
     const leftResult = await bulkImportIsolatingFailures(
