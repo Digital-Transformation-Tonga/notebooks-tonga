@@ -24,3 +24,9 @@ export function getSequenceSqlitePath(): string {
 export const REGISTRATION_NUMBER_RETRY_LIMIT = Number(
   Deno?.env?.get('REGISTRATION_NUMBER_RETRY_LIMIT') || 10
 )
+export const MIGRATION_SUMMARY_PATH =
+  Deno?.env?.get('MIGRATION_SUMMARY_PATH') || 'tmp/migration-summary.txt'
+
+export function getMigrationSummaryPath(): string {
+  return Deno?.env?.get('MIGRATION_SUMMARY_PATH') || MIGRATION_SUMMARY_PATH
+}
