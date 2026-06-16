@@ -7,11 +7,19 @@ import {
   prepareDocumentsForImport,
   formatRegistrationNumberChangeLine,
   getRegistrationNumberChanges,
+  clearRegistrationNumberChanges,
   resetRegistrationNumberSession,
   restoreSequenceBaselines,
+  setRegistrationNumberChanges,
   tryAssignNewRegistrationNumber,
 } from './registrationSequence.ts'
 import { REGISTRATION_NUMBER_RETRY_LIMIT, DOMAIN, getMigrationSummaryPath } from './vars.ts'
+import {
+  appendFailedRecord,
+  clearMigrationHistory,
+  loadFailedRecords,
+  loadRegistrationNumberChanges,
+} from './migrationHistory.ts'
 import { dirname } from 'jsr:@std/path/dirname'
 
 export const extractFieldType = (obj: any, fieldName: string): unknown[] => {
@@ -63,7 +71,21 @@ export const migrationProgress = {
   failedRecords: [] as FailedRecord[],
   reset(skip: number) {
     this.importedCount = skip
-    this.failedRecords = []
+
+    if (skip === 0) {
+      clearMigrationHistory()
+      this.failedRecords = []
+      clearRegistrationNumberChanges()
+      console.log('Starting fresh migration history')
+    } else {
+      this.failedRecords = loadFailedRecords()
+      setRegistrationNumberChanges(loadRegistrationNumberChanges())
+      console.log(
+        `Resuming migration: loaded ${this.failedRecords.length} failed record(s) ` +
+          `and ${getRegistrationNumberChanges().length} registration number change(s) from prior runs`
+      )
+    }
+
     resetRegistrationNumberSession()
   },
   recordImported(count: number) {
@@ -80,13 +102,16 @@ export const migrationProgress = {
   ) {
     const reason = error.trim() || 'Unknown error'
     const recordNumber = this.getNextRecordNumber()
-
-    this.failedRecords.push({
+    const failedRecord = {
       recordNumber,
       entryId,
       trackingId: trackingId ?? 'unknown',
       error: reason,
-    })
+    }
+
+    // Persist before memory so a crash cannot lose cross-run history.
+    appendFailedRecord(failedRecord)
+    this.failedRecords.push(failedRecord)
 
     console.error(
       `SKIPPED RECORD #${recordNumber}: entryId=${entryId}, trackingId=${trackingId ?? 'unknown'}, reason=${reason}`
@@ -94,6 +119,19 @@ export const migrationProgress = {
 
     if (options?.wasImported) {
       this.importedCount = Math.max(0, this.importedCount - 1)
+    }
+  },
+  getSummaryData() {
+    const failedFromDisk = loadFailedRecords()
+    const changesFromDisk = loadRegistrationNumberChanges()
+
+    return {
+      failedRecords:
+        failedFromDisk.length > 0 ? failedFromDisk : this.failedRecords,
+      registrationNumberChanges:
+        changesFromDisk.length > 0
+          ? changesFromDisk
+          : getRegistrationNumberChanges(),
     }
   },
   logResumeHint() {
@@ -104,27 +142,30 @@ export const migrationProgress = {
     )
   },
   buildSummaryLines(eventLabel: string): string[] {
+    const { failedRecords, registrationNumberChanges } = this.getSummaryData()
+
     const lines = [
       'Migration summary',
       `Event: ${eventLabel}`,
       `Domain: ${DOMAIN}`,
       `Completed at: ${new Date().toISOString()}`,
+      'Note: failed records and registration number changes include all resumed runs',
       '',
       `MIGRATION COMPLETE: ${eventLabel}`,
       `Imported: ${this.importedCount}`,
-      `Failed: ${this.failedRecords.length}`,
+      `Failed: ${failedRecords.length}`,
       '',
     ]
 
-    if (this.failedRecords.length > 0) {
+    if (failedRecords.length > 0) {
       lines.push('Failed records:')
-      for (const record of this.failedRecords) {
+      for (const record of failedRecords) {
         lines.push(
           `  #${record.recordNumber}: entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
         )
       }
 
-      const errorRecordCount = this.getNextRecordNumber()
+      const errorRecordCount = this.importedCount + failedRecords.length + 1
       lines.push('')
       lines.push(`ERROR RECORD COUNT: ${errorRecordCount}`)
       lines.push(
@@ -133,8 +174,9 @@ export const migrationProgress = {
       lines.push('')
     }
 
-    const registrationNumberChanges = getRegistrationNumberChanges()
-    lines.push(`Registration number changes: ${registrationNumberChanges.length}`)
+    lines.push(
+      `Registration number changes: ${registrationNumberChanges.length}`
+    )
     lines.push('')
 
     if (registrationNumberChanges.length > 0) {
@@ -165,23 +207,30 @@ export const migrationProgress = {
     }
   },
   logSummary(eventLabel: string) {
+    const { failedRecords, registrationNumberChanges } = this.getSummaryData()
+
     console.log('')
     console.log(`MIGRATION COMPLETE: ${eventLabel}`)
     console.log(`Imported: ${this.importedCount}`)
-    console.log(`Failed: ${this.failedRecords.length}`)
+    console.log(`Failed: ${failedRecords.length}`)
 
-    if (this.failedRecords.length > 0) {
+    if (failedRecords.length > 0) {
       console.error('Failed records:')
-      for (const record of this.failedRecords) {
+      for (const record of failedRecords) {
         console.error(
           `  #${record.recordNumber}: entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
         )
       }
-      this.logResumeHint()
+      const errorRecordCount = this.importedCount + failedRecords.length + 1
+      console.error(`ERROR RECORD COUNT: ${errorRecordCount}`)
+      console.error(
+        `Resume with skip: ${errorRecordCount} to start from record ${errorRecordCount + 1}`
+      )
     }
 
-    const registrationNumberChanges = getRegistrationNumberChanges()
-    console.log(`Registration number changes: ${registrationNumberChanges.length}`)
+    console.log(
+      `Registration number changes: ${registrationNumberChanges.length}`
+    )
 
     if (registrationNumberChanges.length > 0) {
       console.warn('Changed registration numbers:')

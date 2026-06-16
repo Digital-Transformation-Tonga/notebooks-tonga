@@ -30,3 +30,25 @@ export const MIGRATION_SUMMARY_PATH =
 export function getMigrationSummaryPath(): string {
   return Deno?.env?.get('MIGRATION_SUMMARY_PATH') || MIGRATION_SUMMARY_PATH
 }
+
+export const MIGRATION_FAILURES_HISTORY_PATH =
+  Deno?.env?.get('MIGRATION_FAILURES_HISTORY_PATH') ||
+  'tmp/migration-failures.jsonl'
+
+export const MIGRATION_REG_CHANGES_HISTORY_PATH =
+  Deno?.env?.get('MIGRATION_REG_CHANGES_HISTORY_PATH') ||
+  'tmp/migration-reg-number-changes.jsonl'
+
+export function getMigrationFailuresHistoryPath(): string {
+  return (
+    Deno?.env?.get('MIGRATION_FAILURES_HISTORY_PATH') ||
+    MIGRATION_FAILURES_HISTORY_PATH
+  )
+}
+
+export function getMigrationRegChangesHistoryPath(): string {
+  return (
+    Deno?.env?.get('MIGRATION_REG_CHANGES_HISTORY_PATH') ||
+    MIGRATION_REG_CHANGES_HISTORY_PATH
+  )
+}
