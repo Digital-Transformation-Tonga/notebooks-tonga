@@ -14,6 +14,17 @@ const SUPPORTED_TYPES = new Set<MigrationEventType>(['birth', 'death'])
 let warnedMissingDb = false
 const usedRegistrationNumbersInSession = new Set<string>()
 
+const MIGRATION_ORIGINAL_REG_NUMBER_KEY = '_migrationOriginalRegistrationNumber'
+
+export type RegistrationNumberChangeRecord = {
+  entryId: string
+  trackingId: string
+  previous: string
+  next: string
+}
+
+const successfulRegistrationNumberChanges: RegistrationNumberChangeRecord[] = []
+
 function openDatabase(): Database {
   return new Database(getSequenceSqlitePath())
 }
@@ -204,6 +215,47 @@ export function isSequenceStoreConfigured(): boolean {
 
 export function resetRegistrationNumberSession(): void {
   usedRegistrationNumbersInSession.clear()
+  successfulRegistrationNumberChanges.length = 0
+}
+
+export function getRegistrationNumberChanges(): RegistrationNumberChangeRecord[] {
+  return [...successfulRegistrationNumberChanges]
+}
+
+export function formatRegistrationNumberChangeLine(
+  change: RegistrationNumberChangeRecord
+): string {
+  return (
+    `trackingId=${change.trackingId}: ${change.previous} -> ${change.next} ` +
+    `(sequence ${extractSequenceLabel(change.previous)} -> ${extractSequenceLabel(change.next)})`
+  )
+}
+
+function rememberOriginalRegistrationNumber(
+  document: Record<string, unknown>,
+  registrationNumber: string
+): void {
+  if (!document[MIGRATION_ORIGINAL_REG_NUMBER_KEY]) {
+    document[MIGRATION_ORIGINAL_REG_NUMBER_KEY] = registrationNumber
+  }
+}
+
+export function recordSuccessfulRegistrationNumberChange(
+  document: Record<string, unknown>
+): void {
+  const original = document[MIGRATION_ORIGINAL_REG_NUMBER_KEY]
+  const current = getAcceptedRegistrationNumber(document)
+
+  if (typeof original !== 'string' || !current || original === current) {
+    return
+  }
+
+  successfulRegistrationNumberChanges.push({
+    entryId: String(document.id ?? 'unknown'),
+    trackingId: String(document.trackingId ?? 'unknown'),
+    previous: original,
+    next: current,
+  })
 }
 
 export function isRegistrationNumberUsedInSession(
@@ -258,6 +310,7 @@ export function tryAssignNewRegistrationNumber(
     return undefined
   }
 
+  rememberOriginalRegistrationNumber(document, current)
   setDocumentRegistrationNumber(document, next)
   return { previous: current, next }
 }
@@ -355,6 +408,7 @@ export function commitRegistrationNumberFromDocument(
     return
   }
 
+  recordSuccessfulRegistrationNumberChange(document)
   markRegistrationNumberUsedInSession(registrationNumber)
 
   const parsed = parseRegistrationNumber(registrationNumber, eventType)
