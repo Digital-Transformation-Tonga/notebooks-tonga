@@ -79,6 +79,8 @@ jobs:
           RECORD_SKIP: ${{ github.event.inputs.skip }}
           SEQUENCE_SQLITE_PATH: ./v1-to-v2-data-migration/data/seq.db
           MIGRATION_SUMMARY_PATH: ./tmp/migration-summary.txt
+          MIGRATION_FAILURES_HISTORY_PATH: ./tmp/migration-failures.jsonl
+          MIGRATION_REG_CHANGES_HISTORY_PATH: ./tmp/migration-reg-number-changes.jsonl
           OPENCRVS_CLIENT_ID: ${{ github.event.inputs.client_id }}
           OPENCRVS_CLIENT_SECRET: ${{ github.event.inputs.client_secret }}
         run: |
@@ -99,6 +101,8 @@ jobs:
           name: migration-${{ github.event.inputs.event }}-${{ github.run_id }}
           path: |
             tmp/migration-summary.txt
+            tmp/migration-failures.jsonl
+            tmp/migration-reg-number-changes.jsonl
             v1-to-v2-data-migration/data/seq.db
           retention-days: 90
           if-no-files-found: warn

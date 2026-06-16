@@ -7,12 +7,11 @@ Deno.test('buildSummaryLines includes failed records and resume hint', () => {
   migrationProgress.reset(0)
   migrationProgress.importedCount = 2
 
-  migrationProgress.failedRecords.push({
-    recordNumber: 3,
-    entryId: 'entry-fail',
-    trackingId: 'BFAIL01',
-    error: 'Event creation failed: 500',
-  })
+  migrationProgress.recordFailure(
+    'entry-fail',
+    'BFAIL01',
+    'Event creation failed: 500'
+  )
 
   const lines = migrationProgress.buildSummaryLines('birth')
 
@@ -23,7 +22,10 @@ Deno.test('buildSummaryLines includes failed records and resume hint', () => {
     lines.some((line) => line.includes('trackingId=BFAIL01')),
     true
   )
-  assertEquals(lines.includes('Resume with skip: 4'), true)
+  assertEquals(
+    lines.some((line) => line.includes('Resume with skip: 4')),
+    true
+  )
   assertEquals(lines.includes('Registration number changes: 0'), true)
 })
 

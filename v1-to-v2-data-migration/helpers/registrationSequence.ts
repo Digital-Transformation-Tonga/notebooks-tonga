@@ -8,6 +8,7 @@ import {
   type MigrationEventType,
 } from './registrationNumber.ts'
 import { getSequenceSqlitePath, REGISTRATION_NUMBER_RETRY_LIMIT } from './vars.ts'
+import { appendRegistrationNumberChange } from './migrationHistory.ts'
 
 const SUPPORTED_TYPES = new Set<MigrationEventType>(['birth', 'death'])
 
@@ -215,7 +216,17 @@ export function isSequenceStoreConfigured(): boolean {
 
 export function resetRegistrationNumberSession(): void {
   usedRegistrationNumbersInSession.clear()
+}
+
+export function clearRegistrationNumberChanges(): void {
   successfulRegistrationNumberChanges.length = 0
+}
+
+export function setRegistrationNumberChanges(
+  changes: RegistrationNumberChangeRecord[]
+): void {
+  successfulRegistrationNumberChanges.length = 0
+  successfulRegistrationNumberChanges.push(...changes)
 }
 
 export function getRegistrationNumberChanges(): RegistrationNumberChangeRecord[] {
@@ -250,12 +261,14 @@ export function recordSuccessfulRegistrationNumberChange(
     return
   }
 
-  successfulRegistrationNumberChanges.push({
+  const change = {
     entryId: String(document.id ?? 'unknown'),
     trackingId: String(document.trackingId ?? 'unknown'),
     previous: original,
     next: current,
-  })
+  }
+  appendRegistrationNumberChange(change)
+  successfulRegistrationNumberChanges.push(change)
 }
 
 export function isRegistrationNumberUsedInSession(
