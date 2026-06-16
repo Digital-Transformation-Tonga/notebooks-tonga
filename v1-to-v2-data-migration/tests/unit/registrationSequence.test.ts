@@ -301,3 +301,44 @@ serialTest(
     })
   }
 )
+
+serialTest(
+  'recordSuccessfulRegistrationNumberChange adds to end summary list',
+  async () => {
+    await withTempSequenceDb(async () => {
+      const {
+        commitRegistrationNumberFromDocument,
+        formatRegistrationNumberChangeLine,
+        getRegistrationNumberChanges,
+        resetRegistrationNumberSession,
+        tryAssignNewRegistrationNumber,
+      } = await import(
+        `../../helpers/registrationSequence.ts?summary-${Date.now()}`
+      )
+
+      resetRegistrationNumberSession()
+
+      const document = {
+        id: 'entry-1',
+        type: 'birth',
+        trackingId: 'B2SR0NE',
+        actions: [
+          {
+            type: 'REGISTER',
+            status: 'Accepted',
+            registrationNumber: 'TONT/NB/TT/1862/2021',
+          },
+        ],
+      }
+
+      tryAssignNewRegistrationNumber(document)
+      commitRegistrationNumberFromDocument(document)
+
+      assertEquals(getRegistrationNumberChanges().length, 1)
+      assertEquals(
+        formatRegistrationNumberChangeLine(getRegistrationNumberChanges()[0]),
+        'trackingId=B2SR0NE: TONT/NB/TT/1862/2021 -> TONT/NB/TT/1863/2021 (sequence 1862 -> 1863)'
+      )
+    })
+  }
+)

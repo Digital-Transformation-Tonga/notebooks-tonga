@@ -5,6 +5,8 @@ import {
   isSequenceStoreConfigured,
   logRegistrationNumberChange,
   prepareDocumentsForImport,
+  formatRegistrationNumberChangeLine,
+  getRegistrationNumberChanges,
   resetRegistrationNumberSession,
   restoreSequenceBaselines,
   tryAssignNewRegistrationNumber,
@@ -112,6 +114,16 @@ export const migrationProgress = {
         console.error(
           `  #${record.recordNumber}: entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
         )
+      }
+    }
+
+    const registrationNumberChanges = getRegistrationNumberChanges()
+    console.log(`Registration number changes: ${registrationNumberChanges.length}`)
+
+    if (registrationNumberChanges.length > 0) {
+      console.warn('Changed registration numbers:')
+      for (const change of registrationNumberChanges) {
+        console.warn(`  ${formatRegistrationNumberChangeLine(change)}`)
       }
     }
   },
