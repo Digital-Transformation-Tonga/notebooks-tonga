@@ -11,7 +11,8 @@ import {
   restoreSequenceBaselines,
   tryAssignNewRegistrationNumber,
 } from './registrationSequence.ts'
-import { REGISTRATION_NUMBER_RETRY_LIMIT } from './vars.ts'
+import { REGISTRATION_NUMBER_RETRY_LIMIT, DOMAIN, getMigrationSummaryPath } from './vars.ts'
+import { dirname } from 'jsr:@std/path/dirname'
 
 export const extractFieldType = (obj: any, fieldName: string): unknown[] => {
   const fields: unknown[] = []
@@ -102,6 +103,67 @@ export const migrationProgress = {
       `Resume with skip: ${errorRecordCount} to start from record ${errorRecordCount + 1}`
     )
   },
+  buildSummaryLines(eventLabel: string): string[] {
+    const lines = [
+      'Migration summary',
+      `Event: ${eventLabel}`,
+      `Domain: ${DOMAIN}`,
+      `Completed at: ${new Date().toISOString()}`,
+      '',
+      `MIGRATION COMPLETE: ${eventLabel}`,
+      `Imported: ${this.importedCount}`,
+      `Failed: ${this.failedRecords.length}`,
+      '',
+    ]
+
+    if (this.failedRecords.length > 0) {
+      lines.push('Failed records:')
+      for (const record of this.failedRecords) {
+        lines.push(
+          `  #${record.recordNumber}: entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
+        )
+      }
+
+      const errorRecordCount = this.getNextRecordNumber()
+      lines.push('')
+      lines.push(`ERROR RECORD COUNT: ${errorRecordCount}`)
+      lines.push(
+        `Resume with skip: ${errorRecordCount} to start from record ${errorRecordCount + 1}`
+      )
+      lines.push('')
+    }
+
+    const registrationNumberChanges = getRegistrationNumberChanges()
+    lines.push(`Registration number changes: ${registrationNumberChanges.length}`)
+    lines.push('')
+
+    if (registrationNumberChanges.length > 0) {
+      lines.push('Changed registration numbers:')
+      for (const change of registrationNumberChanges) {
+        lines.push(`  ${formatRegistrationNumberChangeLine(change)}`)
+      }
+    }
+
+    return lines
+  },
+  writeSummaryFile(eventLabel: string) {
+    const summaryPath = getMigrationSummaryPath()
+
+    try {
+      const dir = dirname(summaryPath)
+      if (dir && dir !== '.') {
+        Deno.mkdirSync(dir, { recursive: true })
+      }
+
+      const lines = this.buildSummaryLines(eventLabel)
+      Deno.writeTextFileSync(summaryPath, `${lines.join('\n')}\n`)
+      console.log(`Migration summary written to ${summaryPath}`)
+    } catch (err) {
+      console.error(
+        `Failed to write migration summary to ${summaryPath}: ${formatErrorMessage(err)}`
+      )
+    }
+  },
   logSummary(eventLabel: string) {
     console.log('')
     console.log(`MIGRATION COMPLETE: ${eventLabel}`)
@@ -115,6 +177,7 @@ export const migrationProgress = {
           `  #${record.recordNumber}: entryId=${record.entryId}, trackingId=${record.trackingId}, reason=${record.error}`
         )
       }
+      this.logResumeHint()
     }
 
     const registrationNumberChanges = getRegistrationNumberChanges()
@@ -126,6 +189,8 @@ export const migrationProgress = {
         console.warn(`  ${formatRegistrationNumberChangeLine(change)}`)
       }
     }
+
+    this.writeSummaryFile(eventLabel)
   },
 }
 
