@@ -128,7 +128,7 @@ export const countryResolver = {
     'legacyInfo.legacyRecordStatus': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.legacyRecordStatus'),
     'legacyInfo.migratedAt': (data: EventRegistration) =>
-        getCustomField(data, 'birth.dataMigration.dataMigration-view-group.migratedAt'),
+        getCustomDateField(data, 'birth.dataMigration.dataMigration-view-group.migratedAt'),
     'legacyInfo.migratedBy': (data: EventRegistration) =>
         getCustomField(data, 'birth.dataMigration.dataMigration-view-group.migratedBy'),
     'legacyInfo.isMigrated': (data: EventRegistration) =>
@@ -328,7 +328,7 @@ export const deathCountryResolver = {
     'legacyInfo.legacyDrn': (data: EventRegistration) =>
         getCustomField(data,'death.dataMigration.dataMigration-view-group.legecyRegistrationNo'),
     'legacyInfo.migratedAt': (data: EventRegistration) =>
-        getCustomField(data,'death.dataMigration.dataMigration-view-group.migratedAt'),
+        getCustomDateField(data,'death.dataMigration.dataMigration-view-group.migratedAt'),
     'legacyInfo.migratedBy': (data: EventRegistration) =>
         getCustomField(data,'death.dataMigration.dataMigration-view-group.migratedBy'),
     'legacyInfo.isMigrated': (data: EventRegistration) =>
