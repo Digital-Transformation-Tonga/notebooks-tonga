@@ -421,7 +421,7 @@ Deno.test('deathResolver - informant fields', async (t) => {
   })
 
   await t.step(
-    'should resolve informant.phoneNo with country code stripped',
+    'should resolve informant.phoneNo in v2 international format',
     () => {
       const data = buildDeathEventRegistration()
       const result = transform(data, deathResolver, 'death')
@@ -429,7 +429,7 @@ Deno.test('deathResolver - informant fields', async (t) => {
 
       assertEquals(
         declareAction?.declaration['informant.phoneNo'],
-        '0987654321'
+        '+6767712345'
       )
     }
   )

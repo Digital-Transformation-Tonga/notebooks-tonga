@@ -15,12 +15,12 @@ import {
   shouldEmitSpouseDetailFields,
 } from './resolverUtils.ts'
 import {
-  COUNTRY_PHONE_CODE,
   resolveAddress,
 } from '../countryData/addressResolver.ts'
 import { EventRegistration, ResolverMap } from './types.ts'
 import { resolveName } from '../countryData/nameResolver.ts'
 import { getCustomFieldVerificationStatus } from '../countryData/verificationResolver.ts'
+import { normalizePhoneNumber } from './phoneUtils.ts'
 
 const informantResolver: ResolverMap = {
   'informant.dob': (data: EventRegistration, eventType: 'birth' | 'death') =>
@@ -47,7 +47,7 @@ const informantResolver: ResolverMap = {
   'informant.phoneNo': (
     data: EventRegistration,
     eventType: 'birth' | 'death'
-  ) => data.registration.contactPhoneNumber?.replace(COUNTRY_PHONE_CODE, '0'), // @todo https://github.com/opencrvs/opencrvs-core/issues/9601
+  ) => normalizePhoneNumber(data.registration.contactPhoneNumber),
   'informant.email': (data: EventRegistration, eventType: 'birth' | 'death') =>
     data.registration.contactEmail, // type: FieldType.EMAIL,
   'informant.relation': (

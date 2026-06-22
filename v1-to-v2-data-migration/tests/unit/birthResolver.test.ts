@@ -693,9 +693,9 @@ Deno.test('birthResolver - informant fields', async (t) => {
   })
 
   await t.step(
-    'should resolve informant.phoneNo with country code stripped',
+    'should resolve informant.phoneNo in v2 international format',
     () => {
-      const fullPhoneNumber = buildPhoneNumber('0987654321')
+      const fullPhoneNumber = buildPhoneNumber('7712345')
       const registration = buildBirthEventRegistration({
         registration: {
           trackingId: 'B123456',
@@ -706,10 +706,9 @@ Deno.test('birthResolver - informant fields', async (t) => {
       const result = transform(registration, birthResolver, 'birth')
       const declareAction = result.actions.find((a) => a.type === 'DECLARE')
 
-      // Should strip country code and return local number with leading zero
       assertEquals(
         declareAction?.declaration['informant.phoneNo'],
-        '0987654321'
+        '+6767712345'
       )
     }
   )

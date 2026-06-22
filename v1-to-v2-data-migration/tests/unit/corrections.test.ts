@@ -30,14 +30,14 @@ Deno.test('Corrections - Birth', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0788888888',
+                value: '7888888',
               },
             ],
             output: [
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0799999999',
+                value: '7999999',
               },
             ],
           },
@@ -51,11 +51,11 @@ Deno.test('Corrections - Birth', async (t) => {
 
       assertEquals(correctionAction !== undefined, true)
       assertEquals(correctionAction?.declaration, {
-        'informant.phoneNo': '0799999999',
+        'informant.phoneNo': '+6767999999',
       })
       assertEquals(
         correctionAction?.annotation?.['informant.phoneNo'],
-        '0788888888'
+        '+6767888888'
       )
     }
   )
@@ -1279,7 +1279,7 @@ Deno.test('Corrections - Death', async (t) => {
             {
               valueCode: 'informant',
               valueId: 'registrationPhone',
-              value: '0788888888',
+              value: '7888888',
             },
           ],
           output: [
@@ -1291,7 +1291,7 @@ Deno.test('Corrections - Death', async (t) => {
             {
               valueCode: 'informant',
               valueId: 'registrationPhone',
-              value: '0799999999',
+              value: '7999999',
             },
           ],
         },
@@ -1305,12 +1305,12 @@ Deno.test('Corrections - Death', async (t) => {
 
     assertEquals(correctionAction?.declaration, {
       'informant.relation': 'DAUGHTER',
-      'informant.phoneNo': '0799999999',
+      'informant.phoneNo': '+6767999999',
     })
     assertEquals(correctionAction?.annotation?.['informant.relation'], 'SON')
     assertEquals(
       correctionAction?.annotation?.['informant.phoneNo'],
-      '0788888888'
+      '+6767888888'
     )
   })
 
@@ -1501,7 +1501,7 @@ Deno.test('Corrections - Edge Cases', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0788888888',
+                value: '7888888',
               },
             ],
             output: [
@@ -1518,7 +1518,7 @@ Deno.test('Corrections - Edge Cases', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0799999999',
+                value: '7999999',
               },
             ],
           },
@@ -1533,7 +1533,7 @@ Deno.test('Corrections - Edge Cases', async (t) => {
       assertEquals(correctionAction?.declaration, {
         'child.gender': 'female',
         'mother.name': { firstname: 'NewName' },
-        'informant.phoneNo': '0799999999',
+        'informant.phoneNo': '+6767999999',
       })
       assertEquals(correctionAction?.annotation?.['child.gender'], 'male')
       assertEquals(correctionAction?.annotation?.['mother.name'], {
@@ -1541,7 +1541,7 @@ Deno.test('Corrections - Edge Cases', async (t) => {
       })
       assertEquals(
         correctionAction?.annotation?.['informant.phoneNo'],
-        '0788888888'
+        '+6767888888'
       )
     }
   )

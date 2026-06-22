@@ -11,6 +11,7 @@ import {
   isDateField,
   normalizeDeclarationDates,
 } from './dateUtils.ts'
+import { isPhoneField, normalizePhoneNumber } from './phoneUtils.ts'
 import { COUNTRY_FIELD_MAPPINGS } from '../countryData/countryMappings.ts'
 import { NAME_MAPPINGS } from '../countryData/nameMappings.ts'
 import { ADDRESS_MAPPINGS } from '../countryData/addressMappings.ts'
@@ -40,6 +41,22 @@ const mappings = {
   ...COUNTRY_FIELD_MAPPINGS,
 }
 
+function normalizeFieldValue(fieldId: string, value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value
+  }
+
+  if (isDateField(fieldId)) {
+    return normalizeDateString(value)
+  }
+
+  if (isPhoneField(fieldId)) {
+    return normalizePhoneNumber(value)
+  }
+
+  return value
+}
+
 function patternMatch(
   correction: Record<string, any>,
   declaration: Record<string, any>
@@ -53,8 +70,8 @@ function patternMatch(
         continue
       }
       transformedData[valueKey] =
-        typeof value === 'string' && isDateField(valueKey)
-          ? normalizeDateString(value)
+        typeof value === 'string'
+          ? normalizeFieldValue(valueKey, value)
           : value
     } else if (NAME_MAPPINGS[key]) {
       const nameMapping = NAME_MAPPINGS[key](value as string)
@@ -516,8 +533,8 @@ export function transform(
 ): TransformedDocument {
   const result = Object.entries(resolver).map(([fieldId, r]) => {
     let value = r(eventRegistration, eventType)
-    if (isDateField(fieldId) && typeof value === 'string') {
-      value = normalizeDateString(value)
+    if (typeof value === 'string') {
+      value = normalizeFieldValue(fieldId, value)
     }
     return [fieldId, value]
   })

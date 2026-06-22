@@ -40,6 +40,11 @@ Deno.test('transform normalizes legacy datetime fields in action declarations', 
           'birth.dataMigration.dataMigration-view-group.legacyRegistrationDate',
         value: '2025-05-28 09:02:45',
       },
+      {
+        fieldId:
+          'birth.dataMigration.dataMigration-view-group.migratedAt',
+        value: '2025-05-30 08:36:19',
+      },
     ],
   })
 
@@ -63,5 +68,6 @@ Deno.test('transform normalizes legacy datetime fields in action declarations', 
       declaration['legacyInfo.legacyRegistrationDate'],
       '2025-05-28'
     )
+    assertEquals(declaration['legacyInfo.migratedAt'], '2025-05-30')
   }
 })

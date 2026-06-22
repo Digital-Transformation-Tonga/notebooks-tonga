@@ -43,7 +43,7 @@ Deno.test('PostProcess - Single Correction', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0788888888',
+                value: '7888888',
               },
             ],
             output: [
@@ -55,7 +55,7 @@ Deno.test('PostProcess - Single Correction', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0799999999',
+                value: '7999999',
               },
             ],
           },
@@ -83,21 +83,21 @@ Deno.test('PostProcess - Single Correction', async (t) => {
       assertEquals(correctionAction?.declaration?.['child.gender'], 'female')
       assertEquals(
         correctionAction?.declaration?.['informant.phoneNo'],
-        '0799999999'
+        '+6767999999'
       )
 
       // The correction action should have the old values in annotation
       assertEquals(correctionAction?.annotation?.['child.gender'], 'male')
       assertEquals(
         correctionAction?.annotation?.['informant.phoneNo'],
-        '0788888888'
+        '+6767888888'
       )
 
       // The REGISTER action (previous action with declaration) should now have the old values
       assertEquals(registerAction?.declaration?.['child.gender'], 'male')
       assertEquals(
         registerAction?.declaration?.['informant.phoneNo'],
-        '0788888888'
+        '+6767888888'
       )
     }
   )
@@ -732,14 +732,14 @@ Deno.test('PostProcess - Corrections With Actions In Between', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0788888888',
+                value: '7888888',
               },
             ],
             output: [
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0799999999',
+                value: '7999999',
               },
             ],
           },
@@ -765,18 +765,18 @@ Deno.test('PostProcess - Corrections With Actions In Between', async (t) => {
       // Correction has new phone
       assertEquals(
         correctionAction?.declaration?.['informant.phoneNo'],
-        '0799999999'
+        '+6767999999'
       )
       assertEquals(
         correctionAction?.annotation?.['informant.phoneNo'],
-        '0788888888'
+        '+6767888888'
       )
 
       // VALIDATE action (most recent before correction with non-empty declaration)
       // should have the old phone number
       assertEquals(
         validateAction?.declaration?.['informant.phoneNo'],
-        '0788888888'
+        '+6767888888'
       )
     }
   )
@@ -1187,7 +1187,7 @@ Deno.test('PostProcess - Mix of Updates and Corrections', async (t) => {
         registration: {
           trackingId: 'B123456',
           registrationNumber: '2024B123456',
-          contactPhoneNumber: '0711111111',
+          contactPhoneNumber: '+6767111111',
         },
         history: [
           {
@@ -1237,7 +1237,7 @@ Deno.test('PostProcess - Mix of Updates and Corrections', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0799999999',
+                value: '7999999',
               },
             ],
             output: [
@@ -1249,7 +1249,7 @@ Deno.test('PostProcess - Mix of Updates and Corrections', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0711111111',
+                value: '7111111',
               },
             ],
           },
@@ -1289,21 +1289,21 @@ Deno.test('PostProcess - Mix of Updates and Corrections', async (t) => {
       assertEquals(correctionAction?.declaration?.['mother.nationality'], 'GBR')
       assertEquals(
         correctionAction?.declaration?.['informant.phoneNo'],
-        '0711111111'
+        '+6767111111'
       )
 
       // The correction should have old values in annotation
       assertEquals(correctionAction?.annotation?.['mother.nationality'], 'USA')
       assertEquals(
         correctionAction?.annotation?.['informant.phoneNo'],
-        '0799999999'
+        '+6767999999'
       )
 
       // The REGISTER action should be reverse-engineered to show values before the correction
       assertEquals(registerAction?.declaration?.['mother.nationality'], 'USA')
       assertEquals(
         registerAction?.declaration?.['informant.phoneNo'],
-        '0799999999'
+        '+6767999999'
       )
 
       // The REGISTER action should also have the updated child gender (from update)
@@ -1417,7 +1417,7 @@ Deno.test('PostProcess - Correction Without Approval', async (t) => {
         registration: {
           trackingId: 'B123456',
           registrationNumber: '2024B123456',
-          contactPhoneNumber: '0733333333',
+          contactPhoneNumber: '+6767333333',
         },
         history: [
           {
@@ -1475,7 +1475,7 @@ Deno.test('PostProcess - Correction Without Approval', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0799999999',
+                value: '7999999',
               },
             ],
             output: [
@@ -1487,7 +1487,7 @@ Deno.test('PostProcess - Correction Without Approval', async (t) => {
               {
                 valueCode: 'informant',
                 valueId: 'registrationPhone',
-                value: '0733333333',
+                value: '7333333',
               },
             ],
           },
@@ -1520,12 +1520,12 @@ Deno.test('PostProcess - Correction Without Approval', async (t) => {
       assertEquals(secondCorrection?.declaration?.['mother.nationality'], 'FRA')
       assertEquals(
         secondCorrection?.declaration?.['informant.phoneNo'],
-        '0733333333'
+        '+6767333333'
       )
       assertEquals(secondCorrection?.annotation?.['mother.nationality'], 'USA')
       assertEquals(
         secondCorrection?.annotation?.['informant.phoneNo'],
-        '0799999999'
+        '+6767999999'
       )
 
       // For the second correction fields, REGISTER should NOT be reverse-engineered
@@ -1533,7 +1533,7 @@ Deno.test('PostProcess - Correction Without Approval', async (t) => {
       assertEquals(registerAction?.declaration?.['mother.nationality'], 'FRA')
       assertEquals(
         registerAction?.declaration?.['informant.phoneNo'],
-        '0733333333'
+        '+6767333333'
       )
     }
   )

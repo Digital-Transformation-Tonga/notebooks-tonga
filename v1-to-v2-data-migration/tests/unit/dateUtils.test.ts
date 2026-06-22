@@ -30,6 +30,10 @@ Deno.test('isDateField matches legacy date resolver keys', () => {
   assertEquals(isDateField('legacyInfo.migratedAt'), false)
 })
 
+Deno.test('normalizeDateString normalizes legacy migratedAt datetime values', () => {
+  assertEquals(normalizeDateString('2025-05-30 08:36:19'), '2025-05-30')
+})
+
 Deno.test('normalizeDeclarationDates normalizes legacy datetime fields', () => {
   assertEquals(
     normalizeDeclarationDates({
