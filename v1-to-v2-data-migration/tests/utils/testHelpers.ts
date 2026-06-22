@@ -42,7 +42,7 @@ export function buildBirthEventRegistration(
     registration: {
       trackingId: 'B123456',
       registrationNumber: '2024B123456',
-      contactPhoneNumber: buildPhoneNumber('0987654321'),
+      contactPhoneNumber: buildPhoneNumber('7712345'),
       contactEmail: 'test@example.com',
       informantsSignature: 'data:image/png;base64,abc123',
     },
@@ -125,7 +125,7 @@ export function buildDeathEventRegistration(
     registration: {
       trackingId: 'DW12345',
       registrationNumber: 'REG123',
-      contactPhoneNumber: buildPhoneNumber('0987654321'),
+      contactPhoneNumber: buildPhoneNumber('7712345'),
       contactEmail: 'contact@example.com',
     },
     history: [
