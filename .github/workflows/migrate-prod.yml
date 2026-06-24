@@ -20,14 +20,6 @@ on:
         required: true
         type: string
         default: 'farajaland.opencrvs.org'
-      client_id:
-        description: 'System Client ID'
-        required: false
-        type: string
-      client_secret:
-        description: 'System Client Secret'
-        required: false
-        type: string
       skip:
         description: 'Skip count from failed run (use "Resume with skip" value to start after the error record)'
         required: false
@@ -71,8 +63,8 @@ jobs:
           MIGRATION_SUMMARY_PATH: ./tmp/migration-summary.txt
           MIGRATION_FAILURES_HISTORY_PATH: ./tmp/migration-failures.jsonl
           MIGRATION_REG_CHANGES_HISTORY_PATH: ./tmp/migration-reg-number-changes.jsonl
-          OPENCRVS_CLIENT_ID: ${{ github.event.inputs.client_id }}
-          OPENCRVS_CLIENT_SECRET: ${{ github.event.inputs.client_secret }}
+          OPENCRVS_CLIENT_ID: ${{ secrets.OPENCRVS_CLIENT_ID }}
+          OPENCRVS_CLIENT_SECRET: ${{ secrets.OPENCRVS_CLIENT_SECRET }}
         run: |
           set +e
           deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi ./tmp/migrate.ts 2>&1 | tee /tmp/migrate-output.txt
