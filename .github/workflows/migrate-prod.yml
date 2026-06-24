@@ -19,7 +19,7 @@ on:
         description: 'The environment domain (without protocol or subdomains)'
         required: true
         type: string
-        default: 'farajaland.opencrvs.org'
+        default: 'stg.crvs.gov.to'
       skip:
         description: 'Skip count from failed run (use "Resume with skip" value to start after the error record)'
         required: false
@@ -40,26 +40,24 @@ jobs:
           ref: ${{ github.ref }}
 
       # ADD VPN SETUP STEPS HERE
-      - name: Preflight auth endpoint
-        env:
-          OPENCRVS_DOMAIN: ${{ github.event.inputs.domain }}
-        run: |
-          DOMAIN="$(echo "$OPENCRVS_DOMAIN" | sed -E 's#^https?://##' | sed -E 's#/*$##')"
-          URL="https://${DOMAIN}/oauth/token"
-          echo "Checking $URL"
-          code=$(curl -s -o /tmp/preflight.txt -w "%{http_code}" "$URL" || true)
-          if [ "$code" = "404" ]; then
-            echo "Token endpoint not found at $URL"
-            cat /tmp/preflight.txt
-            exit 1
-          fi
       
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-          curl -fsSL https://deno.land/install.sh | sh
-          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+          if ! command -v jq &> /dev/null; then
+            echo "jq not found. Installing..."
+            sudo apt-get update
+            sudo apt-get install -y jq
+          else
+            echo "jq is already installed."
+          fi
+
+          if ! command -v deno &> /dev/null; then
+            echo "deno not found. Installing..."
+            curl -fsSL https://deno.land/install.sh | sh
+            echo "$HOME/.deno/bin" >> $GITHUB_PATH
+          else
+            echo "deno is already installed."
+          fi
 
       - name: Convert notebook to TypeScript
         run: |
