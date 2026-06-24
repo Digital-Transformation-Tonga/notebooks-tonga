@@ -9,6 +9,7 @@ on:
         type: choice
         default: 'development'
         options:
+          - staging
           - development
           - qa
           - datamigration
