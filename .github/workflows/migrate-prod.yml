@@ -40,7 +40,20 @@ jobs:
           ref: ${{ github.ref }}
 
       # ADD VPN SETUP STEPS HERE
-
+      - name: Preflight auth endpoint
+        env:
+          OPENCRVS_DOMAIN: ${{ github.event.inputs.domain }}
+        run: |
+          DOMAIN="$(echo "$OPENCRVS_DOMAIN" | sed -E 's#^https?://##' | sed -E 's#/*$##')"
+          URL="https://${DOMAIN}/oauth/token"
+          echo "Checking $URL"
+          code=$(curl -s -o /tmp/preflight.txt -w "%{http_code}" "$URL" || true)
+          if [ "$code" = "404" ]; then
+            echo "Token endpoint not found at $URL"
+            cat /tmp/preflight.txt
+            exit 1
+          fi
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
