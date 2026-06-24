@@ -65,6 +65,7 @@ jobs:
           bash ./scripts/deno-notebook-to-deno.sh ./v1-to-v2-data-migration/migrate.ipynb ./tmp/migrate.ts
 
       - name: Run the script with Deno
+        timeout-minutes: 4464
         id: deno-script
         env:
           OPENCRVS_EVENT: ${{ github.event.inputs.event }}
