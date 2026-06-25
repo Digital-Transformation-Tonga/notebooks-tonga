@@ -202,30 +202,43 @@ const GetRegistrationsList = async (
   const skip = (page - 1) * pageSize
   const searchSet =
     event === 'birth' ? 'BirthEventSearchSet' : 'DeathEventSearchSet'
-  const response = await fetch(`${GATEWAY}/graphql`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      operationName: 'GetRegistrationsListByFilter',
-      query: `query GetRegistrationsListByFilter {
-        searchEvents(advancedSearchParameters: { event: ${event} }, count: ${pageSize}, skip: ${skip}, sortColumn: "createdAt.keyword") {
-          totalItems
-          results {
-            ... on ${searchSet} {
-              id
-            }
+
+  const query = JSON.stringify({
+    operationName: 'GetRegistrationsListByFilter',
+    query: `query GetRegistrationsListByFilter {
+      searchEvents(advancedSearchParameters: { event: ${event} }, count: ${pageSize}, skip: ${skip}, sortColumn: "dateOfDeclaration") {
+        totalItems
+        results {
+          ... on ${searchSet} {
+            id
           }
         }
-      }`,
-    }),
+      }
+    }`,
   })
-  if (!response.ok) {
-    throw new Error(`GraphQL request failed: ${response.statusText}`)
+
+  let attempt = 0
+  while (attempt < 5) {
+    try {
+      const response = await fetch(`${GATEWAY}/graphql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: query,
+      })
+      if (!response.ok) {
+        throw new Error(`GraphQL request failed: ${response.statusText}`)
+      }
+      return await response.json()
+    } catch (e) {
+      attempt++
+      if (attempt >= 5) throw e
+      console.warn(`GetRegistrationsList failed, retrying in ${attempt * 5}s... (${e instanceof Error ? e.message : 'Unknown error'})`)
+      await new Promise((res) => setTimeout(res, attempt * 5000))
+    }
   }
-  return response.json()
 }
 
 export const fetchAllBirthRegistrations = async (
