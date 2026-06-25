@@ -198,27 +198,26 @@ const GetRegistrationsList = async (
   event: string,
   page: number,
   pageSize: number
-) => {
+): Promise<any> => {
   const skip = (page - 1) * pageSize
   const searchSet =
     event === 'birth' ? 'BirthEventSearchSet' : 'DeathEventSearchSet'
 
-  const query = JSON.stringify({
-    operationName: 'GetRegistrationsListByFilter',
-    query: `query GetRegistrationsListByFilter {
-      searchEvents(advancedSearchParameters: { event: ${event} }, count: ${pageSize}, skip: ${skip}, sortColumn: "dateOfDeclaration") {
-        totalItems
-        results {
-          ... on ${searchSet} {
-            id
+  const fetchWithDynamicChunking = async (currentSkip: number, currentCount: number, attempt = 0): Promise<any> => {
+    const query = JSON.stringify({
+      operationName: 'GetRegistrationsListByFilter',
+      query: `query GetRegistrationsListByFilter {
+        searchEvents(advancedSearchParameters: { event: ${event} }, count: ${currentCount}, skip: ${currentSkip}, sortColumn: "dateOfDeclaration") {
+          totalItems
+          results {
+            ... on ${searchSet} {
+              id
+            }
           }
         }
-      }
-    }`,
-  })
+      }`,
+    })
 
-  let attempt = 0
-  while (attempt < 5) {
     try {
       const response = await fetch(`${GATEWAY}/graphql`, {
         method: 'POST',
@@ -231,14 +230,44 @@ const GetRegistrationsList = async (
       if (!response.ok) {
         throw new Error(`GraphQL request failed: ${response.statusText}`)
       }
-      return await response.json()
+      const data = await response.json()
+      if (data.errors && data.errors.length > 0) {
+        throw new Error(`GraphQL error: ${data.errors[0].message}`)
+      }
+      return data
     } catch (e) {
-      attempt++
-      if (attempt >= 5) throw e
-      console.warn(`GetRegistrationsList failed, retrying in ${attempt * 5}s... (${e instanceof Error ? e.message : 'Unknown error'})`)
-      await new Promise((res) => setTimeout(res, attempt * 5000))
+      if (currentCount > 100) {
+        // Adaptive chunking: split the request in half if it fails and count > 100
+        const newCount = Math.floor(currentCount / 2)
+        console.warn(`Request failed for count=${currentCount}, dynamically reducing batch to ${newCount}...`)
+        
+        // Fetch both halves sequentially to avoid overwhelming the server again
+        const firstHalf = await fetchWithDynamicChunking(currentSkip, newCount, 0)
+        const secondHalf = await fetchWithDynamicChunking(currentSkip + newCount, currentCount - newCount, 0)
+        
+        return {
+          data: {
+            searchEvents: {
+              totalItems: firstHalf.data.searchEvents.totalItems,
+              results: [
+                ...firstHalf.data.searchEvents.results,
+                ...secondHalf.data.searchEvents.results
+              ]
+            }
+          }
+        }
+      } else {
+        // Base exponential backoff for smaller chunks
+        attempt++
+        if (attempt >= 5) throw e
+        console.warn(`GetRegistrationsList failed at count=${currentCount}, retrying in ${attempt * 5}s... (${e instanceof Error ? e.message : 'Unknown error'})`)
+        await new Promise((res) => setTimeout(res, attempt * 5000))
+        return await fetchWithDynamicChunking(currentSkip, currentCount, attempt)
+      }
     }
   }
+
+  return await fetchWithDynamicChunking(skip, pageSize)
 }
 
 export const fetchAllBirthRegistrations = async (
