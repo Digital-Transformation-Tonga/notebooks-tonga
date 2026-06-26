@@ -28,7 +28,7 @@ on:
 
 jobs:
   migrate:
-    timeout-minutes: 5000
+    timeout-minutes: 7200
     name: Migrate ${{ github.event.inputs.event }} in ${{ github.event.inputs.environment }} (${{ github.event.inputs.domain }})
     runs-on: [self-hosted, linux, "${{ github.event.inputs.environment }}"]
     environment: ${{ github.event.inputs.environment }}
