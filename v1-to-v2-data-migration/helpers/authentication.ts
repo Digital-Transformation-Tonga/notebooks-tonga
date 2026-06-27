@@ -55,3 +55,68 @@ export async function getTokenForSystemClient(
 
   return res.token || res.access_token
 }
+
+const TOKEN_REFRESH_INTERVAL_MS = 8 * 60 * 1000 // Refresh every 8 minutes (well before typical 10-20 min JWT expiry)
+
+/**
+ * Auto-refreshing token wrapper that transparently re-fetches the JWT
+ * before it expires. Call `.get()` to always get a valid token.
+ */
+export class AutoRefreshingToken {
+  private token: string
+  private lastRefresh: number
+  private clientId: string
+  private clientSecret: string
+  private refreshing: Promise<string> | null = null
+
+  constructor(
+    initialToken: string,
+    clientId: string,
+    clientSecret: string
+  ) {
+    this.token = initialToken
+    this.lastRefresh = Date.now()
+    this.clientId = clientId
+    this.clientSecret = clientSecret
+  }
+
+  async get(): Promise<string> {
+    const age = Date.now() - this.lastRefresh
+    if (age < TOKEN_REFRESH_INTERVAL_MS) {
+      return this.token
+    }
+
+    // Coalesce concurrent refresh calls
+    if (!this.refreshing) {
+      this.refreshing = this.refresh()
+    }
+
+    try {
+      return await this.refreshing
+    } finally {
+      this.refreshing = null
+    }
+  }
+
+  private async refresh(): Promise<string> {
+    try {
+      const newToken = await getTokenForSystemClient(
+        this.clientId,
+        this.clientSecret
+      )
+      this.token = newToken
+      this.lastRefresh = Date.now()
+      console.log(`Token refreshed at ${new Date().toISOString()}`)
+      return this.token
+    } catch (err) {
+      console.warn(
+        `Token refresh failed, using existing token: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      )
+      // Extend the current token's life by 2 minutes to avoid hammering auth
+      this.lastRefresh = Date.now() - TOKEN_REFRESH_INTERVAL_MS + 2 * 60 * 1000
+      return this.token
+    }
+  }
+}

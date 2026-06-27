@@ -203,7 +203,11 @@ const GetRegistrationsList = async (
   const searchSet =
     event === 'birth' ? 'BirthEventSearchSet' : 'DeathEventSearchSet'
 
-  const fetchWithDynamicChunking = async (currentSkip: number, currentCount: number, attempt = 0): Promise<any> => {
+  const MAX_SPLIT_DEPTH = 3 // Prevent exponential recursive splitting
+  const MAX_RETRIES = 8 // More retries with longer backoff
+  const SPLIT_COOLDOWN_MS = 2000 // Cooldown between split halves
+
+  const fetchWithDynamicChunking = async (currentSkip: number, currentCount: number, attempt = 0, depth = 0): Promise<any> => {
     const query = JSON.stringify({
       operationName: 'GetRegistrationsListByFilter',
       query: `query GetRegistrationsListByFilter {
@@ -236,14 +240,18 @@ const GetRegistrationsList = async (
       }
       return data
     } catch (e) {
-      if (currentCount > 100) {
-        // Adaptive chunking: split the request in half if it fails and count > 100
+      // Only split if we haven't exceeded the max depth and count is still large enough
+      if (currentCount > 100 && depth < MAX_SPLIT_DEPTH) {
         const newCount = Math.floor(currentCount / 2)
-        console.warn(`Request failed for count=${currentCount}, dynamically reducing batch to ${newCount}...`)
+        console.warn(`Request failed for count=${currentCount}, dynamically reducing batch to ${newCount} (depth ${depth + 1}/${MAX_SPLIT_DEPTH})...`)
         
-        // Fetch both halves sequentially to avoid overwhelming the server again
-        const firstHalf = await fetchWithDynamicChunking(currentSkip, newCount, 0)
-        const secondHalf = await fetchWithDynamicChunking(currentSkip + newCount, currentCount - newCount, 0)
+        // Fetch both halves sequentially with a cooldown between them
+        const firstHalf = await fetchWithDynamicChunking(currentSkip, newCount, 0, depth + 1)
+
+        // Cooldown between halves to reduce ES pressure
+        await new Promise((res) => setTimeout(res, SPLIT_COOLDOWN_MS))
+
+        const secondHalf = await fetchWithDynamicChunking(currentSkip + newCount, currentCount - newCount, 0, depth + 1)
         
         return {
           data: {
@@ -257,12 +265,16 @@ const GetRegistrationsList = async (
           }
         }
       } else {
-        // Base exponential backoff for smaller chunks
+        // Exponential backoff with jitter for retries
         attempt++
-        if (attempt >= 5) throw e
-        console.warn(`GetRegistrationsList failed at count=${currentCount}, retrying in ${attempt * 5}s... (${e instanceof Error ? e.message : 'Unknown error'})`)
-        await new Promise((res) => setTimeout(res, attempt * 5000))
-        return await fetchWithDynamicChunking(currentSkip, currentCount, attempt)
+        if (attempt >= MAX_RETRIES) {
+          console.error(`GetRegistrationsList exhausted ${MAX_RETRIES} retries at count=${currentCount}, skip=${currentSkip}`)
+          throw e
+        }
+        const backoffMs = Math.min(attempt * 5000 + Math.random() * 2000, 60000)
+        console.warn(`GetRegistrationsList failed at count=${currentCount}, retrying in ${(backoffMs / 1000).toFixed(1)}s (attempt ${attempt}/${MAX_RETRIES})... (${e instanceof Error ? e.message : 'Unknown error'})`)
+        await new Promise((res) => setTimeout(res, backoffMs))
+        return await fetchWithDynamicChunking(currentSkip, currentCount, attempt, depth)
       }
     }
   }

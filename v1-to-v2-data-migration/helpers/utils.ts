@@ -22,6 +22,43 @@ import {
 } from './migrationHistory.ts'
 import { dirname } from 'jsr:@std/path/dirname'
 
+export const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms))
+
+export const INTER_BATCH_COOLDOWN_MS = 2000 // 2s pause between batches to reduce ES pressure
+export const FETCH_CONCURRENCY = 5 // Max parallel record fetches
+
+/**
+ * Processes items with bounded concurrency, returning results in order.
+ * Failed items return { ok: false, error } instead of throwing.
+ */
+export const fetchWithConcurrency = async <T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<Array<{ ok: true; value: R } | { ok: false; error: unknown; item: T }>> => {
+  const results: Array<{ ok: true; value: R } | { ok: false; error: unknown; item: T }> = new Array(items.length)
+  let nextIndex = 0
+
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const idx = nextIndex++
+      try {
+        const value = await fn(items[idx])
+        results[idx] = { ok: true, value }
+      } catch (error) {
+        results[idx] = { ok: false, error, item: items[idx] }
+      }
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    () => worker()
+  )
+  await Promise.all(workers)
+  return results
+}
+
 export const extractFieldType = (obj: any, fieldName: string): unknown[] => {
   const fields: unknown[] = []
 
