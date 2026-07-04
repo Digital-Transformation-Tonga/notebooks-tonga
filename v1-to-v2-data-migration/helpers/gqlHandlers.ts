@@ -1275,6 +1275,10 @@ export const syncLocations = async (token: string) => {
     },
   })
   if (!response.ok) {
+    if (response.status === 504) {
+      console.warn(`Sync Locations timed out (504 Gateway Timeout). It is likely still running in the background.`)
+      return 'Gateway Timeout'
+    }
     throw new Error(`Sync Locations failed: ${response.statusText}`)
   }
   return response.statusText
@@ -1289,6 +1293,10 @@ export const reindex = async (token: string) => {
     },
   })
   if (!response.ok) {
+    if (response.status === 504) {
+      console.warn(`Reindex timed out (504 Gateway Timeout). It is likely still running in the background.`)
+      return 'Gateway Timeout'
+    }
     throw new Error(`Reindex failed: ${response.statusText}`)
   }
   return response.statusText
