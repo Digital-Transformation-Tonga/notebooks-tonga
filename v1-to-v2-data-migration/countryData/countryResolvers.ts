@@ -313,7 +313,7 @@ export const deathCountryResolver = {
     'administration.comments': (data: EventRegistration) =>
         getCustomField(data,'death.administrationSection.administrationSection-view-group.administrationSectionAdminNote'),
 
-    'legacyInfo.healthId': (data: EventRegistration) =>
+    'deceased.healthId': (data: EventRegistration) =>
         getCustomField(data, 'death.deceased.deceased-view-group.healthId'),
     'legacyInfo.ageMonths': (data: EventRegistration) =>
         coerceLegacyOptionalInt(
